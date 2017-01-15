@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>  
+    <meta charset="UTF-8">
+    <title>ログイン</title>
+</head>
+<body>
+    <form action="login" method="post">
+        <div name="error" style="color:red; padding: 10px; display:none;"></div>
+        <table>
+            <tbody>
+            <tr>
+                <td>ユーザー名：</td>
+                <td><input name="name"></td>
+            </tr>
+            <tr>
+                <td>パスワード：</td>
+                <td><input type="password" name="pass"></td>
+            </tr>
+            </tbody>
+        </table>
+        <div style="margin-top:10px;">
+            <input type="submit" name="enter" value="入力">
+            <button name="cancel">キャンセル</button>
+        </div>
+    </form>
+</body>
+</html>
+
