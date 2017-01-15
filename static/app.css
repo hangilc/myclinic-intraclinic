@@ -1,0 +1,26 @@
+a { text-decoration: none }
+
+#userInfo { margin: 10px 0; }
+
+#newPostWrapper { margin: 10px 0;}
+
+.postWrapper {
+	width: 400px;
+}
+
+.postWrapper .dateLabel {
+	margin: 10px 0; font-weight: bold; font-size: 120%;
+	padding-bottom: 6px;
+	border-bottom: 1px solid #ccc;
+}
+
+.postWrapper .content {
+	line-height: 1.5;
+}
+
+.commentListWrapper {
+	border: 1px solid #ccc;
+	padding: 6px;
+	margin: 10px 0;
+	border-radius: 6px;
+}

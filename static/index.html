@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+    <title>院内ミーティング</title>
+    <link rel="stylesheet" href="app.css">
+</head>
+<body>
+<h1>院内ミーティング</h1>
+
+<div id="userInfo" name="userInfo">
+    ユーザー名：（<span name="userName">なし</span>）
+    <a name="login" href="javascript:void(0)">ログイン</a>
+    <a name="logout" href="javascript:void(0)">ログアウト</a>
+</div>
+<div name="newPostWrapper" style="display:none" id="newPostWrapper">
+    <a href="javascript:void(0)" name="newPostLink">新規投稿</a>
+    <div id="newPostWorkarea" style="display:none">
+        <div name="newPostDate"></div>
+        <textarea name="content" rows="16" cols="40"></textarea>
+        <div>
+            <button name="enter">入力</button>
+            <button name="cancel">キャンセル</button>
+        </div>
+    </div>
+</div>
+<div id="upperNav"></div>
+<div id="postListWrapper"></div>
+<script src="bundle.js"></script>
+</body>
+</html>
