@@ -1,0 +1,19 @@
+{
+  "name": "myclinic-intraclinic",
+  "version": "1.0.0",
+  "description": "intranet service for myclinic",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/hangilc/myclinic-intraclinic.git"
+  },
+  "author": "Hangil Chang",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hangilc/myclinic-intraclinic/issues"
+  },
+  "homepage": "https://github.com/hangilc/myclinic-intraclinic#readme"
+}
