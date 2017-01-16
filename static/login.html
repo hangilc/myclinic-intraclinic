@@ -3,8 +3,23 @@
 <head>  
     <meta charset="UTF-8">
     <title>ログイン</title>
+    <style>
+        #error div { 
+            color: red; 
+            border: 1px solid #f00;
+            margin: 10px  0;
+            padding: 10px;
+            display: inline-block;
+        }
+        #error { display: none; }
+    </style>
 </head>
 <body>
+    <h1>院内ミーティング</h1>
+    <h2>ログイン</h2>
+    <div id="error">
+        <div>ユーザー名・パスワードが不適切です。</div>
+    </div>
     <form action="login" method="post">
         <div name="error" style="color:red; padding: 10px; display:none;"></div>
         <table>
@@ -24,6 +39,12 @@
             <button name="cancel">キャンセル</button>
         </div>
     </form>
+    <script>
+        var params = location.search.substring(1).split("&");
+        if( params.includes("error") ){
+            document.getElementById("error").style.display = "block";
+        }
+    </script>
 </body>
 </html>
 

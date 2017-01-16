@@ -17,6 +17,9 @@ function initApp(app, config, subpath) {
 		path: subpath
 	}));
 	app.post("/login", function(req, res){
+		sessionStore.all(function(err, list){
+			console.log(err, list);
+		})
 		var name = req.body.name;
 		var pass = req.body.pass;
 		if( name in userMap && pass === userMap[name].pass ){
@@ -26,8 +29,14 @@ function initApp(app, config, subpath) {
 			}
 			res.redirect(req.baseUrl + "/");
 		} else {
-			res.redirect(req.baseUrl + "/login.html");
+			res.redirect(req.baseUrl + "/login.html?error");
 		}
+	});
+	app.get("/logout", function(req, res){
+		if( req.session ){
+			req.session.destroy();
+		}
+		res.redirect(req.baseUrl + "/login.html");
 	});
 	app.get("/", function(req, res, next){
 		if( !(req.session && req.session.user) ){
