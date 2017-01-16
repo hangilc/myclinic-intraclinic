@@ -27,8 +27,12 @@ class ModalDialog {
 	}
 
 	open() {
-		document.body.appendChild(this.screen);
-		document.body.appendChild(this.dialog);
+		if( this.screen !== null ){
+			if( this.dialog !== null ){
+				document.body.appendChild(this.screen);
+				document.body.appendChild(this.dialog);
+			}
+		}
 	}
 
 	close() {

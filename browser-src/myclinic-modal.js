@@ -23,8 +23,12 @@ class ModalDialog {
         this.onClose = fn;
     }
     open() {
-        document.body.appendChild(this.screen);
-        document.body.appendChild(this.dialog);
+        if (this.screen !== null) {
+            if (this.dialog !== null) {
+                document.body.appendChild(this.screen);
+                document.body.appendChild(this.dialog);
+            }
+        }
     }
     close() {
         if (this.screen) {

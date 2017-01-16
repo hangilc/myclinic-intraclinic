@@ -17,20 +17,21 @@ function initApp(app, config, subpath) {
 		path: subpath
 	}));
 	app.post("/login", function(req, res){
-		sessionStore.all(function(err, list){
-			console.log(err, list);
-		})
 		var name = req.body.name;
 		var pass = req.body.pass;
-		if( name in userMap && pass === userMap[name].pass ){
-			req.session.user = {
-				name: name,
-				role: userMap[name].role
+		if( name in userMap ){
+			var user = userMap[name];
+			if( pass === user.pass ){
+				req.session.user = {
+					name: name,
+					role: user.role,
+					label: user.label
+				}
+				res.redirect(req.baseUrl + "/");
+				return;
 			}
-			res.redirect(req.baseUrl + "/");
-		} else {
-			res.redirect(req.baseUrl + "/login.html?error");
 		}
+		res.redirect(req.baseUrl + "/login.html?error");
 	});
 	app.get("/logout", function(req, res){
 		if( req.session ){
@@ -45,6 +46,14 @@ function initApp(app, config, subpath) {
 		}
 		console.log(req.session.user);
 		next();
+	});
+	app.get("/whoami", function(req, res){
+		if( req.session ){
+			res.json(req.session.user || null);
+		} else {
+			res.json(null);
+		}
 	})
+
 }
 exports.initApp = initApp;
