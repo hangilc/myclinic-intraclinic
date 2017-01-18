@@ -45,7 +45,18 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
+	var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+	    return new (P || (P = Promise))(function (resolve, reject) {
+	        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+	        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+	        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+	        step((generator = generator.apply(thisArg, _arguments || [])).next());
+	    });
+	};
 	const $ = __webpack_require__(1);
+	const service = __webpack_require__(2);
+	const nav_1 = __webpack_require__(6);
+	const post_1 = __webpack_require__(8);
 	$.ajax({
 	    url: "whoami",
 	    success: function (user) {
@@ -55,11 +66,59 @@
 	        start(user);
 	    }
 	});
-	function start(user) {
-	    let role = user.role;
-	    if (role === "owner") {
-	        $("#newPostWrapper").css("display", "");
+	function setUserName(name) {
+	    let e = document.getElementById("user-name");
+	    if (e !== null) {
+	        e.innerHTML = "";
+	        let txt = document.createTextNode(name);
+	        e.appendChild(txt);
 	    }
+	}
+	function start(user) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        let role = user.role;
+	        let isOwner = false;
+	        if (role === "owner") {
+	            $("#newPostWrapper").css("display", "");
+	            isOwner = true;
+	        }
+	        else if (role === "staff") {
+	        }
+	        else {
+	            return;
+	        }
+	        setUserName(user.label);
+	        let navManager = new nav_1.NavManager();
+	        navManager.setOnPageChange(() => {
+	            updatePosts();
+	        });
+	        let nPosts = yield service.countIntraclinicPosts();
+	        navManager.updateTotalNumberOfPosts(nPosts);
+	        setupNavs();
+	        navManager.triggerPageChange();
+	        function setupNavs() {
+	            let els = document.querySelectorAll(".nav");
+	            for (let i = 0; i < els.length; i++) {
+	                let e = els[i];
+	                e.appendChild(navManager.createNav());
+	            }
+	        }
+	        function updatePosts() {
+	            return __awaiter(this, void 0, void 0, function* () {
+	                let posts = yield service.listIntraclinicPosts(navManager.getCurrentOffset(), navManager.getPostsperPage());
+	                let wrapper = document.getElementById("postListWrapper");
+	                if (wrapper !== null) {
+	                    let realWrapper = wrapper;
+	                    realWrapper.innerHTML = "";
+	                    posts.forEach((post) => __awaiter(this, void 0, void 0, function* () {
+	                        let comments = yield service.listIntraclinicComment(post.id);
+	                        let p = new post_1.Post(post, comments, isOwner);
+	                        realWrapper.appendChild(p.dom);
+	                    }));
+	                }
+	            });
+	        }
+	    });
 	}
 
 
@@ -10288,6 +10347,836 @@
 	return jQuery;
 	} );
 
+
+/***/ },
+/* 2 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+	    return new (P || (P = Promise))(function (resolve, reject) {
+	        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+	        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+	        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+	        step((generator = generator.apply(thisArg, _arguments || [])).next());
+	    });
+	};
+	const request_1 = __webpack_require__(3);
+	const intraclinic_post_1 = __webpack_require__(4);
+	const intraclinic_comment_1 = __webpack_require__(5);
+	function toNumber(src) {
+	    return +src;
+	}
+	function toText(src) {
+	    return "" + src;
+	}
+	let PostArrayConverter = request_1.arrayConverter(intraclinic_post_1.jsonToIntraclinicPost);
+	let CommentArrayConverter = request_1.arrayConverter(intraclinic_comment_1.jsonToIntraclinicComment);
+	function countIntraclinicPosts() {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service", { _q: "count_intra_clinic_posts" }, "GET", toNumber);
+	    });
+	}
+	exports.countIntraclinicPosts = countIntraclinicPosts;
+	function listIntraclinicPosts(offset, n) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service", {
+	            _q: "list_intra_clinic_posts",
+	            offset: offset,
+	            n: n
+	        }, "GET", PostArrayConverter);
+	    });
+	}
+	exports.listIntraclinicPosts = listIntraclinicPosts;
+	function getIntraclinicPost(id) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service", {
+	            _q: "get_intra_clinic_post",
+	            id: id
+	        }, "GET", intraclinic_post_1.jsonToIntraclinicPost);
+	    });
+	}
+	exports.getIntraclinicPost = getIntraclinicPost;
+	function listIntraclinicComment(postId) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service", {
+	            _q: "list_intra_clinic_comments",
+	            post_id: postId
+	        }, "GET", CommentArrayConverter);
+	    });
+	}
+	exports.listIntraclinicComment = listIntraclinicComment;
+	function enterIntraclinicPost(content) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service", {
+	            _q: "enter_intra_clinic_post",
+	            content: content
+	        }, "POST", toNumber);
+	    });
+	}
+	exports.enterIntraclinicPost = enterIntraclinicPost;
+	function updateIntraclinicPost(id, content) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service", {
+	            _q: "update_intra_clinic_post",
+	            id: id,
+	            content: content
+	        }, "POST", toString);
+	    });
+	}
+	exports.updateIntraclinicPost = updateIntraclinicPost;
+	function deleteIntraclinicPost(id) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service", {
+	            _q: "delete_intra_clinic_post",
+	            id: id
+	        }, "POST", toString);
+	    });
+	}
+	exports.deleteIntraclinicPost = deleteIntraclinicPost;
+	function enterIntraclinicComment(name, content, postId) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service", {
+	            _q: "enter_intra_clinic_comment",
+	            name: name,
+	            content: content,
+	            post_id: postId
+	        }, "POST", toNumber);
+	    });
+	}
+	exports.enterIntraclinicComment = enterIntraclinicComment;
+
+
+/***/ },
+/* 3 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	const $ = __webpack_require__(1);
+	function arrayConverter(c) {
+	    return function (src) {
+	        return src.map(c);
+	    };
+	}
+	exports.arrayConverter = arrayConverter;
+	function request(url, data, method, cvtor) {
+	    return new Promise(function (resolve, reject) {
+	        $.ajax({
+	            url: url,
+	            type: method,
+	            data: data,
+	            dataType: "json",
+	            timeout: 15000,
+	            success: function (result) {
+	                try {
+	                    let obj = cvtor(result);
+	                    resolve(obj);
+	                }
+	                catch (ex) {
+	                    reject(ex);
+	                }
+	            },
+	            error: function (xhr, status, ex) {
+	                reject(JSON.stringify({ xhr: xhr, status: status, exception: ex }));
+	            }
+	        });
+	    });
+	}
+	exports.request = request;
+
+
+/***/ },
+/* 4 */
+/***/ function(module, exports) {
+
+	"use strict";
+	class IntraclinicPost {
+	}
+	exports.IntraclinicPost = IntraclinicPost;
+	function jsonToIntraclinicPost(src) {
+	    let post = new IntraclinicPost();
+	    post.id = src.id;
+	    post.content = src.content;
+	    post.createdAt = src.created_at;
+	    return post;
+	}
+	exports.jsonToIntraclinicPost = jsonToIntraclinicPost;
+
+
+/***/ },
+/* 5 */
+/***/ function(module, exports) {
+
+	"use strict";
+	class IntraclinicComment {
+	}
+	exports.IntraclinicComment = IntraclinicComment;
+	function jsonToIntraclinicComment(src) {
+	    let com = new IntraclinicComment();
+	    com.id = src.id;
+	    com.name = src.name;
+	    com.content = src.content;
+	    com.postId = src.post_id;
+	    com.createdAt = src.created_at;
+	    return com;
+	}
+	exports.jsonToIntraclinicComment = jsonToIntraclinicComment;
+
+
+/***/ },
+/* 6 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	const typed_dom_1 = __webpack_require__(7);
+	class Nav {
+	    constructor() {
+	        this.prevLink = typed_dom_1.h.a({ href: undefined }, ["<"]);
+	        this.nextLink = typed_dom_1.h.a({ href: undefined }, [">"]);
+	        this.dom = typed_dom_1.h.span({}, [
+	            this.prevLink,
+	            " ",
+	            this.nextLink
+	        ]);
+	    }
+	    onPrevLinkClick(cb) {
+	        this.prevLink.addEventListener("click", cb);
+	    }
+	    onNextLinkClick(cb) {
+	        this.nextLink.addEventListener("click", cb);
+	    }
+	    enablePrev(enable) {
+	        if (enable) {
+	            this.prevLink.href = "javascript: void(0)";
+	        }
+	        else {
+	            delete this.prevLink.href;
+	        }
+	    }
+	    enableNext(enable) {
+	        if (enable) {
+	            this.nextLink.href = "javascript: void(0)";
+	        }
+	        else {
+	            delete this.nextLink.href;
+	        }
+	    }
+	}
+	exports.Nav = Nav;
+	function calcNumberOfPages(totalItems, itemsPerPage) {
+	    return Math.floor((totalItems + itemsPerPage - 1) / itemsPerPage);
+	}
+	class NavManager {
+	    constructor() {
+	        this.postsPerPage = 10;
+	        this.nPosts = 0;
+	        this.nPages = 0;
+	        this.currentPage = 1;
+	        this.navs = [];
+	        this.onPageChange = () => { };
+	    }
+	    createNav() {
+	        let nav = new Nav();
+	        nav.onPrevLinkClick(event => {
+	            this.gotoPrev();
+	        });
+	        nav.onNextLinkClick(event => {
+	            this.gotoNext();
+	        });
+	        this.navs.push(nav);
+	        this.updateNavs();
+	        return nav.dom;
+	    }
+	    updateTotalNumberOfPosts(nPosts) {
+	        this.nPosts = nPosts;
+	        this.nPages = calcNumberOfPages(nPosts, this.postsPerPage);
+	        if (this.currentPage > this.nPages) {
+	            if (this.nPages > 0) {
+	                this.currentPage = this.nPages;
+	            }
+	            else {
+	                this.currentPage = 1;
+	            }
+	        }
+	        this.updateNavs();
+	    }
+	    getCurrentOffset() {
+	        return (this.currentPage - 1) * this.postsPerPage;
+	    }
+	    getPostsperPage() {
+	        return this.postsPerPage;
+	    }
+	    setOnPageChange(cb) {
+	        this.onPageChange = cb;
+	    }
+	    triggerPageChange() {
+	        this.onPageChange();
+	    }
+	    updateNavs() {
+	        let enablePrev = this.currentPage > 1;
+	        let enableNext = this.currentPage < this.nPages;
+	        this.navs.forEach(nav => {
+	            nav.enablePrev(enablePrev);
+	            nav.enableNext(enableNext);
+	        });
+	    }
+	    gotoPrev() {
+	        if (this.currentPage > 1) {
+	            this.currentPage -= 1;
+	            this.updateNavs();
+	            this.onPageChange();
+	        }
+	    }
+	    gotoNext() {
+	        if (this.currentPage < this.nPages) {
+	            this.currentPage += 1;
+	            this.updateNavs();
+	            this.onPageChange();
+	        }
+	    }
+	}
+	exports.NavManager = NavManager;
+
+
+/***/ },
+/* 7 */
+/***/ function(module, exports) {
+
+	"use strict";
+	function createElement(tag, attrs, children) {
+	    let e = document.createElement(tag);
+	    for (let key in attrs) {
+	        let val = attrs[key];
+	        if (key === "style") {
+	            if (typeof val === "string") {
+	                e.style.cssText = val;
+	            }
+	            else {
+	                for (let cssKey in val) {
+	                    e.style[cssKey] = val[cssKey];
+	                }
+	            }
+	        }
+	        else {
+	            e.setAttribute(key, val);
+	        }
+	    }
+	    children.forEach(function (n) {
+	        if (typeof n === "string") {
+	            e.appendChild(document.createTextNode(n));
+	        }
+	        else if (n instanceof HTMLElement) {
+	            e.appendChild(n);
+	        }
+	    });
+	    return e;
+	}
+	exports.createElement = createElement;
+	function createElementFn(fn, tag, attrs, children) {
+	    let e = createElement(tag, attrs, children);
+	    fn(e);
+	    return e;
+	}
+	exports.createElementFn = createElementFn;
+	var h;
+	(function (h) {
+	    function makeCreator(tag) {
+	        return function (attrs, children) {
+	            return createElement(tag, attrs, children);
+	        };
+	    }
+	    h.div = makeCreator("div");
+	    h.h1 = makeCreator("h1");
+	    h.h2 = makeCreator("h2");
+	    h.h3 = makeCreator("h3");
+	    h.input = makeCreator("input");
+	    h.button = makeCreator("button");
+	    h.table = makeCreator("table");
+	    h.tbody = makeCreator("tbody");
+	    h.tr = makeCreator("tr");
+	    h.td = makeCreator("td");
+	    h.br = makeCreator("br");
+	    h.p = makeCreator("p");
+	    h.select = makeCreator("select");
+	    h.option = makeCreator("option");
+	    h.span = makeCreator("span");
+	    function form(attrs, children) {
+	        if (!("onSubmit" in attrs)) {
+	            attrs.onSubmit = "return false";
+	        }
+	        return createElement("form", attrs, children);
+	    }
+	    h.form = form;
+	    function a(attrs, children) {
+	        if (!("href" in attrs)) {
+	            attrs.href = "javascript:void(0)";
+	        }
+	        else if (attrs.href === undefined) {
+	            delete attrs.href;
+	        }
+	        return createElement("a", attrs, children);
+	    }
+	    h.a = a;
+	})(h = exports.h || (exports.h = {}));
+
+
+/***/ },
+/* 8 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	const typed_dom_1 = __webpack_require__(7);
+	const kanjidate = __webpack_require__(9);
+	function formatContent(content) {
+	    let lines = content.split(/\r\n|\n|r/);
+	    let out = [];
+	    for (let i = 0; i < lines.length; i++) {
+	        if (i !== 0) {
+	            out.push(typed_dom_1.h.br({}, []));
+	        }
+	        out.push(lines[i]);
+	    }
+	    return out;
+	}
+	function commentPart(comments) {
+	    return typed_dom_1.h.table({
+	        "width": "100%",
+	        "class": "commentListWrapper"
+	    }, [
+	        typed_dom_1.h.tbody({}, [
+	            typed_dom_1.h.tr({ "valign": "top" }, [
+	                typed_dom_1.h.td({ "width": "50%" }, comments.map(c => {
+	                    return typed_dom_1.h.div({}, [
+	                        c.name, " ", c.content
+	                    ]);
+	                })),
+	                typed_dom_1.h.td({ "width": "50%" }, [
+	                    typed_dom_1.h.div({}, [
+	                        "コメント追加",
+	                        " ",
+	                        typed_dom_1.h.input({ "value": "閲覧しました。" }, []),
+	                        " ",
+	                        typed_dom_1.h.button({}, ["入力"])
+	                    ])
+	                ])
+	            ])
+	        ])
+	    ]);
+	}
+	class Post {
+	    constructor(modelPost, modelComments, isOwner) {
+	        let editPart = null;
+	        if (isOwner) {
+	            editPart = typed_dom_1.h.div({
+	                style: "border:1px solid #ccc; padding: 6px"
+	            }, [
+	                typed_dom_1.h.a({ "class": "cmd-link" }, ["編集"]),
+	                " ",
+	                typed_dom_1.h.a({ "class": "cmd-link" }, ["削除"]),
+	            ]);
+	        }
+	        let content = typed_dom_1.h.div({ "class": "content" }, formatContent(modelPost.content));
+	        let comment = null;
+	        if (!isOwner) {
+	            comment = commentPart(modelComments);
+	        }
+	        this.dom = typed_dom_1.h.div({ "class": "postWrapper" }, [
+	            typed_dom_1.h.div({ "class": "dateLabel" }, [
+	                kanjidate.format(kanjidate.f1, modelPost.createdAt)
+	            ]),
+	            editPart,
+	            content,
+	            comment
+	        ]);
+	    }
+	}
+	exports.Post = Post;
+
+
+/***/ },
+/* 9 */
+/***/ function(module, exports, __webpack_require__) {
+
+	(function(exports){
+
+	"use strict";
+
+	var trunc = Math.trunc || function(x){
+		if( x >= 0 ){
+			return Math.floor(x);
+		} else {
+			return Math.ceil(x);
+		}
+	};
+
+	function ge(year1, month1, day1, year2, month2, day2){
+		if( year1 > year2 ){
+			return true;
+		}
+		if( year1 < year2 ){
+			return false;
+		}
+		if( month1 > month2 ){
+			return true;
+		}
+		if( month1 < month2 ){
+			return false;
+		}
+		return day1 >= day2;
+	}
+
+	function gengouToAlpha(gengou){
+		switch(gengou){
+			case "平成": return "Heisei";
+			case "昭和": return "Shouwa";
+			case "大正": return "Taishou";
+			case "明治": return "Meiji";
+			default: throw new Error("unknown gengou: " + gengou);
+		}
+	}
+
+	function padLeft(str, n, ch){
+		var m = n - str.length;
+		var pad = "";
+		while( m-- > 0 ){
+			pad += ch;
+		}
+		return pad + str;
+	}
+
+	var zenkakuDigits = ["０", "１", "２", "３", "４", "５", "６", "７", "８", "９"];
+	var alphaDigits = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+
+	function isZenkakuDigit(ch){
+		return zenkakuDigits.indexOf(ch) >= 0;
+	}
+
+	function isAlphaDigit(ch){
+		return alphaDigits.indexOf(ch) >= 0;
+	}
+
+	function alphaDigitToZenkaku(ch){
+		var i = alphaDigits.indexOf(ch);
+		return i >= 0 ? zenkakuDigits[i] : ch;
+	}
+
+	function isDateObject(obj){
+		return obj instanceof Date;
+	}
+
+	function removeOpt(opts, what){
+		var result = [];
+		for(var i=0;i<opts.length;i++){
+			var opt = opts[i];
+			if( opt === what ){
+				continue;
+			} else {
+				result.push(opt);
+			}
+		}
+		return result;
+	}
+
+	function toGengou(year, month, day){
+		if( ge(year, month, day, 1989, 1, 8) ){
+			return { gengou:"平成", nen:year - 1988 };
+		}
+		if( ge(year, month, day, 1926, 12, 25) ){
+			return { gengou:"昭和", nen:year - 1925 };
+		}
+		if( ge(year, month, day, 1912, 7, 30) ){
+			return { gengou:"大正", nen:year - 1911 };
+		}
+		if( ge(year, month, day, 1873, 1, 1) ){
+			return { gengou: "明治", nen: year - 1867 };
+		}
+		return { gengou: "西暦", nen: year };
+	}
+
+	exports.toGengou = toGengou;
+
+	function fromGengou(gengou, nen){
+	    nen = Math.floor(+nen);
+	    if( nen < 0 ){
+	    	throw new Error("invalid nen: " + nen);
+	    }
+	    switch (gengou) {
+	        case "平成":
+	            return 1988 + nen;
+	        case "昭和":
+	            return 1925 + nen;
+	        case "大正":
+	            return 1911 + nen;
+	        case "明治":
+	            return 1867 + nen;
+	        case "西暦":
+	            return nen;
+	        default:
+	            throw new Error("invalid gengou: " + gengou);
+	    }
+	}
+
+	exports.fromGengou = fromGengou;
+
+	var youbi = ["日", "月", "火", "水", "木", "金", "土"];
+
+	function toYoubi(dayOfWeek){
+		return youbi[dayOfWeek];
+	}
+
+	exports.toYoubi = toYoubi;
+
+	function KanjiDate(date){
+		this.year = date.getFullYear();
+		this.month = date.getMonth()+1;
+		this.day = date.getDate();
+		this.hour = date.getHours();
+		this.minute = date.getMinutes();
+		this.second = date.getSeconds();
+		this.msec = date.getMilliseconds();
+		this.dayOfWeek = date.getDay();
+		var g = toGengou(this.year, this.month, this.day);
+		this.gengou = g.gengou;
+		this.nen = g.nen;
+		this.youbi = youbi[this.dayOfWeek];
+	}
+
+	function KanjiDateExplicit(year, month, day, hour, minute, second, millisecond){
+		if( hour === undefined ) hour = 0;
+		if( minute === undefined ) minute = 0;
+		if( second === undefined ) second = 0;
+		if( millisecond === undefined ) millisecond = 0;
+		var date = new Date(year, month-1, day, hour, minute, second, millisecond);
+		return new KanjiDate(date);
+	}
+
+	function KanjiDateFromString(str){
+		var m;
+		m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+		if( m ){
+			return KanjiDateExplicit(+m[1], +m[2], +m[3]);
+		}
+		m = str.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
+		if( m ){
+			return KanjiDateExplicit(+m[1], +m[2], +m[3], +m[4], +m[5], +m[6]);
+		}
+		throw new Error("cannot convert to KanjiDate");
+	}
+
+	function parseFormatString(fmtStr){
+		var result = [];
+		var parts = fmtStr.split(/(\{[^}]+)\}/);
+		parts.forEach(function(part){
+			if( part === "" ) return;
+			if( part[0] === "{" ){
+				part = part.substring(1);
+				var token = {opts: []};
+				var colon = part.indexOf(":");
+				if( part.indexOf(":") >= 0 ){
+					token.part = part.substring(0, colon);
+					var optStr = part.substring(colon+1).trim();
+					if( optStr !== "" ){
+						if( optStr.indexOf(",") >= 0 ){
+							token.opts = optStr.split(/\s*,\s*/);
+						} else {
+							token.opts = [optStr];
+						}
+					}
+				} else {
+					token.part = part;
+				}
+				result.push(token);
+			} else {
+				result.push(part);
+			}
+		});
+		return result;
+	}
+
+	var format1 = "{G}{N}年{M}月{D}日（{W}）";
+	var format2 = "{G}{N}年{M}月{D}日";
+	var format3 = "{G:a}{N}.{M}.{D}";
+	var format4 = "{G}{N:2}年{M:2}月{D:2}日（{W}）";
+	var format5 = "{G}{N:2}年{M:2}月{D:2}日";
+	var format6 = "{G:a}{N:2}.{M:2}.{D:2}";
+	var format7 = "{G}{N}年{M}月{D}日（{W}） {a}{h:12}時{m}分{s}秒";
+	var format8 = "{G}{N:2}年{M:2}月{D:2}日（{W}） {a}{h:12,2}時{m:2}分{s:2}秒";
+	var format9 = "{G}{N}年{M}月{D}日（{W}） {a}{h:12}時{m}分";
+	var format10 = "{G}{N:2}年{M:2}月{D:2}日（{W}） {a}{h:12,2}時{m:2}分";
+	var format11 = "{G}{N:z}年{M:z}月{D:z}日";
+	var format12 = "{G}{N:z,2}年{M:z,2}月{D:z,2}日";
+	var format13 = "{Y}-{M:2}-{D:2}";
+	var format14 = "{Y}-{M:2}-{D:2} {h:2}:{m:2}:{s:2}";
+
+	exports.f1 = format1;
+	exports.f2 = format2;
+	exports.f3 = format3;
+	exports.f4 = format4;
+	exports.f5 = format5;
+	exports.f6 = format6;
+	exports.f7 = format7;
+	exports.f8 = format8;
+	exports.f9 = format9;
+	exports.f10 = format10;
+	exports.f11 = format11;
+	exports.f12 = format12;
+	exports.f13 = format13;
+	exports.f14 = format14;
+	exports.fSqlDate = format13;
+	exports.fSqlDateTime = format14;
+
+	function gengouPart(kdate, opts){
+		var style = "2";
+		opts.forEach(function(opt){
+			if( ["2", "1", "a", "alpha"].indexOf(opt) >= 0 ){
+				style = opt;
+			}
+		})
+		switch(style){
+			case "2": return kdate.gengou;
+			case "1": return kdate.gengou[0]; 
+			case "a": return gengouToAlpha(kdate.gengou)[0]; 
+			case "alpha": return gengouToAlpha(kdate.gengou);
+			default: return kdate.gengou;
+		}
+	}
+
+	function numberPart(num, opts){
+		var zenkaku = false;
+		var width = 1;
+		opts.forEach(function(opt){
+			switch(opt){
+				case "1": width = 1; break;
+				case "2": width = 2; break;
+				case "z": zenkaku = true; break;
+			}
+		});
+		var result = num.toString();
+		if( zenkaku ){
+			result = result.split("").map(alphaDigitToZenkaku).join("");
+		}
+		if( width > 1 && num < 10 ){
+			result = (zenkaku ? "０" : "0") + result;
+		}
+		return result;
+	}
+
+	function nenPart(kdate, opts){
+		if( kdate.nen === 1 && opts.indexOf("g") >= 0 ){
+			return "元";
+		} else {
+			return numberPart(kdate.nen, opts);
+		}
+	}
+
+	function youbiPart(kdate, opts){
+		var style;
+		opts.forEach(function(opt){
+			if( ["1", "2", "3", "alpha"].indexOf(opt) >= 0 ){
+				style = opt;
+			}
+		})
+		switch(style){
+			case "1": return kdate.youbi;
+			case "2": return kdate.youbi + "曜";
+			case "3": return kdate.youbi + "曜日";
+			case "alpha": return dayOfWeek[kdate.dayOfWeek];
+			default: return kdate.youbi;
+		}
+	}
+
+	function hourPart(hour, opts){
+		var ampm = false;
+		if( opts.indexOf("12") >= 0 ){
+			ampm = true;
+			opts = removeOpt(opts, "12");
+		}
+		if( ampm ){
+			hour = hour % 12;
+		}
+		return numberPart(hour, opts);
+	}
+
+	function ampmPart(kdate, opts){
+		var style = "kanji";
+		opts.forEach(function(opt){
+			switch(opt){
+				case "am/pm": style = "am/pm"; break;
+				case "AM/PM": style = "AM/PM"; break;
+			}
+		});
+		var am = kdate.hour < 12;
+		switch(style){
+			case "kanji": return am ? "午前" : "午後";
+			case "am/pm": return am ? "am" : "pm";
+			case "AM/PM": return am ? "AM" : "PM";
+			default : throw new Error("unknown style for AM/PM");
+		}
+	}
+
+	function yearPart(year, opts){
+		return year.toString();
+	}
+
+	function format(formatStr, kdate){
+		var output = [];
+		var tokens = parseFormatString(formatStr);
+		tokens.forEach(function(token){
+			if( typeof token === "string" ){
+				output.push(token);
+			} else {
+				switch(token.part){
+					case "G": output.push(gengouPart(kdate, token.opts)); break;
+					case "N": output.push(nenPart(kdate, token.opts)); break;
+					case "M": output.push(numberPart(kdate.month, token.opts)); break;
+					case "D": output.push(numberPart(kdate.day, token.opts)); break;
+					case "W": output.push(youbiPart(kdate, token.opts)); break;
+					case "h": output.push(hourPart(kdate.hour, token.opts)); break;
+					case "m": output.push(numberPart(kdate.minute, token.opts)); break;
+					case "s": output.push(numberPart(kdate.second, token.opts)); break;
+					case "a": output.push(ampmPart(kdate, token.opts)); break;
+					case "Y": output.push(yearPart(kdate.year, token.opts)); break;
+				}
+			}
+		})
+		return output.join("");
+	}
+
+	exports.format = function(){
+		var narg = arguments.length;
+		var formatStr, args, i;
+		if( narg === 0 ){
+			return format(format1, new KanjiDate(new Date()));
+		} else if( narg === 1 ){
+			return format(format1, cvt(arguments[0]));
+		} else {
+			formatStr = arguments[0];
+			if( formatStr == null ){
+				formatStr = format1;
+			}
+			args = [];
+			for(i=1;i<arguments.length;i++){
+				args.push(arguments[i]);
+			}
+			if( args.length === 1 ){
+				return format(formatStr, cvt(args[0]));
+			} else {
+				return format(formatStr, KanjiDateExplicit.apply(null, args));
+			}
+		}
+		throw new Error("invalid format call");
+
+		function cvt(x){
+			if( isDateObject(x) ){
+				return new KanjiDate(x);
+			} else if( typeof x === "string" ){
+				return KanjiDateFromString(x);
+			}
+			throw new Error("cannot convert to KanjiDate");
+		}
+	}
+
+	})( false ? (window.kanjidate = {}) : exports);
 
 /***/ }
 /******/ ]);

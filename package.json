@@ -21,6 +21,7 @@
   "devDependencies": {
     "@types/jquery": "^2.0.39",
     "jquery": "^3.1.1",
+    "kanjidate": "^1.1.2",
     "myclinic-web": "^1.0.11",
     "webpack": "^1.14.0"
   },
