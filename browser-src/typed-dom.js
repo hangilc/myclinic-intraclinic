@@ -17,14 +17,7 @@ function createElement(tag, attrs, children) {
             e.setAttribute(key, val);
         }
     }
-    children.forEach(function (n) {
-        if (typeof n === "string") {
-            e.appendChild(document.createTextNode(n));
-        }
-        else if (n instanceof HTMLElement) {
-            e.appendChild(n);
-        }
-    });
+    appendToElement(e, children);
     return e;
 }
 exports.createElement = createElement;
@@ -56,6 +49,7 @@ var h;
     h.select = makeCreator("select");
     h.option = makeCreator("option");
     h.span = makeCreator("span");
+    h.textarea = makeCreator("textarea");
     function form(attrs, children) {
         if (!("onSubmit" in attrs)) {
             attrs.onSubmit = "return false";
@@ -74,3 +68,14 @@ var h;
     }
     h.a = a;
 })(h = exports.h || (exports.h = {}));
+function appendToElement(element, children) {
+    children.forEach(function (n) {
+        if (typeof n === "string") {
+            element.appendChild(document.createTextNode(n));
+        }
+        else if (n instanceof HTMLElement) {
+            element.appendChild(n);
+        }
+    });
+}
+exports.appendToElement = appendToElement;

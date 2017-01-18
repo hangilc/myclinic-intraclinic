@@ -26,8 +26,7 @@ function countIntraclinicPosts() {
 exports.countIntraclinicPosts = countIntraclinicPosts;
 function listIntraclinicPosts(offset, n) {
     return __awaiter(this, void 0, void 0, function* () {
-        return request_1.request("/service", {
-            _q: "list_intra_clinic_posts",
+        return request_1.request("/service?_q=list_intra_clinic_posts", {
             offset: offset,
             n: n
         }, "GET", PostArrayConverter);
@@ -36,8 +35,7 @@ function listIntraclinicPosts(offset, n) {
 exports.listIntraclinicPosts = listIntraclinicPosts;
 function getIntraclinicPost(id) {
     return __awaiter(this, void 0, void 0, function* () {
-        return request_1.request("/service", {
-            _q: "get_intra_clinic_post",
+        return request_1.request("/service?_q=get_intra_clinic_post", {
             id: id
         }, "GET", intraclinic_post_1.jsonToIntraclinicPost);
     });
@@ -45,26 +43,24 @@ function getIntraclinicPost(id) {
 exports.getIntraclinicPost = getIntraclinicPost;
 function listIntraclinicComment(postId) {
     return __awaiter(this, void 0, void 0, function* () {
-        return request_1.request("/service", {
-            _q: "list_intra_clinic_comments",
+        return request_1.request("/service?_q=list_intra_clinic_comments", {
             post_id: postId
         }, "GET", CommentArrayConverter);
     });
 }
 exports.listIntraclinicComment = listIntraclinicComment;
-function enterIntraclinicPost(content) {
+function enterIntraclinicPost(content, createdAt) {
     return __awaiter(this, void 0, void 0, function* () {
-        return request_1.request("/service", {
-            _q: "enter_intra_clinic_post",
-            content: content
+        return request_1.request("/service?_q=enter_intra_clinic_post", {
+            content: content,
+            created_at: createdAt
         }, "POST", toNumber);
     });
 }
 exports.enterIntraclinicPost = enterIntraclinicPost;
 function updateIntraclinicPost(id, content) {
     return __awaiter(this, void 0, void 0, function* () {
-        return request_1.request("/service", {
-            _q: "update_intra_clinic_post",
+        return request_1.request("/service?_q=update_intra_clinic_post", {
             id: id,
             content: content
         }, "POST", toString);
@@ -73,20 +69,19 @@ function updateIntraclinicPost(id, content) {
 exports.updateIntraclinicPost = updateIntraclinicPost;
 function deleteIntraclinicPost(id) {
     return __awaiter(this, void 0, void 0, function* () {
-        return request_1.request("/service", {
-            _q: "delete_intra_clinic_post",
+        return request_1.request("/service?_q=delete_intra_clinic_post", {
             id: id
         }, "POST", toString);
     });
 }
 exports.deleteIntraclinicPost = deleteIntraclinicPost;
-function enterIntraclinicComment(name, content, postId) {
+function enterIntraclinicComment(name, content, postId, createdAt) {
     return __awaiter(this, void 0, void 0, function* () {
-        return request_1.request("/service", {
-            _q: "enter_intra_clinic_comment",
+        return request_1.request("/service?_q=enter_intra_clinic_comment", {
             name: name,
             content: content,
-            post_id: postId
+            post_id: postId,
+            created_at: createdAt
         }, "POST", toNumber);
     });
 }

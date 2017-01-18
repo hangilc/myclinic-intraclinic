@@ -15,13 +15,7 @@ export function createElement<T extends HTMLElement>(tag: string, attrs: any,
 			e.setAttribute(key, val);
 		}
 	}
-	children.forEach(function(n){
-		if( typeof n === "string" ){
-			e.appendChild(document.createTextNode(<string>n));
-		} else if( n instanceof HTMLElement ){
-			e.appendChild(<HTMLElement>n);
-		}
-	});
+	appendToElement(e, children);
 	return e;
 }
 
@@ -55,6 +49,7 @@ export namespace h {
 	export let select = makeCreator<HTMLSelectElement>("select");
 	export let option = makeCreator<HTMLOptionElement>("option");
 	export let span = makeCreator<HTMLElement>("span");
+	export let textarea = makeCreator<HTMLTextAreaElement>("textarea");
 
 	export function form(attrs: any, children: (HTMLElement|string|null)[]): HTMLFormElement{
 		if( !("onSubmit" in attrs) ){
@@ -71,4 +66,14 @@ export namespace h {
 		}
 		return createElement<HTMLAnchorElement>("a", attrs, children);
 	}
+}
+
+export function appendToElement(element: HTMLElement, children: (HTMLElement|string|null)[]){
+	children.forEach(function(n){
+		if( typeof n === "string" ){
+			element.appendChild(document.createTextNode(<string>n));
+		} else if( n instanceof HTMLElement ){
+			element.appendChild(<HTMLElement>n);
+		}
+	});
 }

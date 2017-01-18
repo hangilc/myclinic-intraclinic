@@ -1,8 +1,11 @@
-import { h } from "./typed-dom";
+import { h, appendToElement } from "./typed-dom";
 import * as $ from "jquery";
 import * as service from "./service";
 import { NavManager } from "./nav";
 import { Post } from "./post";
+import { PostForm } from "./post-form";
+import { IntraclinicPost } from "./model/intraclinic-post";
+import * as moment from "moment";
 
 interface User {
 	name: string;
@@ -20,43 +23,87 @@ $.ajax({
 	}
 });
 
-function setUserName(name){
-	let e = document.getElementById("user-name");
-	if( e !== null ){
-		e.innerHTML = "";
-		let txt = document.createTextNode(name);
-		e.appendChild(txt);
-	}
+function createNewIntraclinicPost(): IntraclinicPost {
+	let post = new IntraclinicPost();
+	post.createdAt = moment().format("YYYY-MM-DD");
+	post.content = "";
+	post.id = 0;
+	return post;
 }
 
+function userDisp(name: string): HTMLElement{
+	return h.div({"id": "newPostWrapper"}, [
+		"ユーザー名：",
+		name,
+		" ",
+		h.a({href: "logout"}, ["ログアウト"])
+	])
+}
+
+function editPart(isOwner: boolean, onEnter: (id: number) => void): HTMLElement | null {
+	if( isOwner ){
+		let startEdit = h.a({}, ["新規投稿"]);
+		let editorWrapper = h.div({}, []);
+		startEdit.addEventListener("click", event => {
+			if( editorWrapper.firstChild !== null ){
+				return;
+			}
+			let post = createNewIntraclinicPost();
+			let form = new PostForm(post);
+			form.onEnter = async () => {
+				let id = await service.enterIntraclinicPost(post.content, post.createdAt);
+				editorWrapper.innerHTML = "";
+				onEnter(id);
+			};
+			form.onCancel = () => {
+				editorWrapper.innerHTML = "";
+			}
+			editorWrapper.appendChild(form.dom);
+		})
+		return h.div({}, [
+			startEdit,
+			editorWrapper
+		])
+	} else {
+		return null;
+	}
+}
 
 async function start(user: User){
 	let role = user.role;
 	let isOwner = false;
 	if( role === "owner" ){
-		$("#newPostWrapper").css("display", "");
 		isOwner = true;
-	} else if( role === "staff" ) {
-
+	} else if( role === "staff" ){
+		; // nop
 	} else {
 		return;
 	}
-	setUserName(user.label);
 	let navManager: NavManager = new NavManager();
+	await adaptToNumberOfPostsChange();
 	navManager.setOnPageChange(() => {
 		updatePosts();
-	})
-	let nPosts = await service.countIntraclinicPosts();
-	navManager.updateTotalNumberOfPosts(nPosts);
-	setupNavs();
+	});
+	let postsWrapper = h.div({}, []);
+
+	appendToElement(document.body, [
+		h.h1({}, ["院内ミーティング"]),
+		userDisp(user.label),
+		editPart(isOwner, onEnter),
+		navManager.createNav(),
+		postsWrapper,
+		navManager.createNav()
+	]);
 	navManager.triggerPageChange();
 
-	function setupNavs(){
-		let els = document.querySelectorAll(".nav");
-		for(let i=0;i<els.length;i++){
-			let e = els[i];
-			e.appendChild(navManager.createNav());
-		}
+	async function onEnter(id: number){
+		await adaptToNumberOfPostsChange();
+		updatePosts();
+	}
+
+	async function adaptToNumberOfPostsChange(){
+		let nPosts = await service.countIntraclinicPosts();
+		navManager.updateTotalNumberOfPosts(nPosts);
 	}
 
 	async function updatePosts(){
@@ -64,16 +111,12 @@ async function start(user: User){
 			navManager.getCurrentOffset(), 
 			navManager.getPostsperPage()
 		);
-		let wrapper = document.getElementById("postListWrapper");
-		if( wrapper !== null ){
-			let realWrapper = <HTMLElement>wrapper;
-			realWrapper.innerHTML = "";
-			posts.forEach(async post => {
-				let comments = await service.listIntraclinicComment(post.id);
-				let p = new Post(post, comments, isOwner);
-				realWrapper.appendChild(p.dom);
-			})
-		}
+		postsWrapper.innerHTML = "";
+		posts.forEach(async post => {
+			let comments = await service.listIntraclinicComment(post.id);
+			let p = new Post(post, comments, isOwner);
+			postsWrapper.appendChild(p.dom);
+		})
 	}
 }
 
