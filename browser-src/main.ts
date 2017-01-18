@@ -5,6 +5,7 @@ import { NavManager } from "./nav";
 import { Post } from "./post";
 import { PostForm } from "./post-form";
 import { IntraclinicPost } from "./model/intraclinic-post";
+import { IntraclinicComment } from "./model/intraclinic-comment";
 import * as moment from "moment";
 
 interface User {
@@ -120,9 +121,10 @@ async function start(user: User){
 			let post = posts[i];
 			let postId = post.id;
 			let comments = await service.listIntraclinicComments(postId);
-			let p = new Post(post, comments, isOwner);
+			let p = new Post(post, comments, isOwner, user.label);
 			p.onEdit = makeOnEditCallback(p, post, fullUpdate);
 			p.onDelete = makeOnDeleteCallback(postId, fullUpdate);
+			p.onEnterComment = makeOnEnterCommentCallback(updatePosts);
 			postsWrapper.appendChild(p.dom);
 		};
 	}
@@ -163,3 +165,10 @@ function makeOnDeleteCallback(postId: number, updater: () => void){
 	}
 }
 
+function makeOnEnterCommentCallback(updater: () => void){
+	return async function(comment: IntraclinicComment){
+		await service.enterIntraclinicComment(comment.name, comment.content, 
+			comment.postId, comment.createdAt);
+		updater();
+	}
+}

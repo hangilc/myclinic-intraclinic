@@ -121,9 +121,10 @@ function start(user) {
                     let post = posts[i];
                     let postId = post.id;
                     let comments = yield service.listIntraclinicComments(postId);
-                    let p = new post_1.Post(post, comments, isOwner);
+                    let p = new post_1.Post(post, comments, isOwner, user.label);
                     p.onEdit = makeOnEditCallback(p, post, fullUpdate);
                     p.onDelete = makeOnDeleteCallback(postId, fullUpdate);
+                    p.onEnterComment = makeOnEnterCommentCallback(updatePosts);
                     postsWrapper.appendChild(p.dom);
                 }
                 ;
@@ -163,6 +164,14 @@ function makeOnDeleteCallback(postId, updater) {
                 return;
             }
             yield service.deleteIntraclinicPost(postId);
+            updater();
+        });
+    };
+}
+function makeOnEnterCommentCallback(updater) {
+    return function (comment) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield service.enterIntraclinicComment(comment.name, comment.content, comment.postId, comment.createdAt);
             updater();
         });
     };

@@ -167,9 +167,10 @@
 	                    let post = posts[i];
 	                    let postId = post.id;
 	                    let comments = yield service.listIntraclinicComments(postId);
-	                    let p = new post_1.Post(post, comments, isOwner);
+	                    let p = new post_1.Post(post, comments, isOwner, user.label);
 	                    p.onEdit = makeOnEditCallback(p, post, fullUpdate);
 	                    p.onDelete = makeOnDeleteCallback(postId, fullUpdate);
+	                    p.onEnterComment = makeOnEnterCommentCallback(updatePosts);
 	                    postsWrapper.appendChild(p.dom);
 	                }
 	                ;
@@ -209,6 +210,14 @@
 	                return;
 	            }
 	            yield service.deleteIntraclinicPost(postId);
+	            updater();
+	        });
+	    };
+	}
+	function makeOnEnterCommentCallback(updater) {
+	    return function (comment) {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            yield service.enterIntraclinicComment(comment.name, comment.content, comment.postId, comment.createdAt);
 	            updater();
 	        });
 	    };
@@ -10826,7 +10835,9 @@
 
 	"use strict";
 	const typed_dom_1 = __webpack_require__(7);
+	const intraclinic_comment_1 = __webpack_require__(5);
 	const kanjidate = __webpack_require__(9);
+	const moment = __webpack_require__(11);
 	function formatContent(content) {
 	    let lines = content.split(/\r\n|\n|r/);
 	    let out = [];
@@ -10838,42 +10849,34 @@
 	    }
 	    return out;
 	}
-	function commentPart(comments) {
-	    return typed_dom_1.h.table({
-	        "width": "100%",
-	        "class": "commentListWrapper"
-	    }, [
-	        typed_dom_1.h.tbody({}, [
-	            typed_dom_1.h.tr({ "valign": "top" }, [
-	                typed_dom_1.h.td({ "width": "50%" }, comments.map(c => {
-	                    return typed_dom_1.h.div({}, [
-	                        c.name, " ", c.content
-	                    ]);
-	                })),
-	                typed_dom_1.h.td({ "width": "50%" }, [
-	                    typed_dom_1.h.div({}, [
-	                        "コメント追加",
-	                        " ",
-	                        typed_dom_1.h.input({ "value": "閲覧しました。" }, []),
-	                        " ",
-	                        typed_dom_1.h.button({}, ["入力"])
-	                    ])
-	                ])
-	            ])
-	        ])
-	    ]);
-	}
 	class Post {
-	    constructor(modelPost, modelComments, isOwner) {
+	    constructor(modelPost, modelComments, isOwner, userName) {
 	        this.onEdit = () => { };
 	        this.onDelete = () => { };
-	        let editPart = null;
-	        let editLink = typed_dom_1.h.a({ "class": "cmd-link" }, ["編集"]);
-	        editLink.addEventListener("click", event => { this.onEdit(); });
-	        let deleteLink = typed_dom_1.h.a({ "class": "cmd-link" }, ["削除"]);
-	        deleteLink.addEventListener("click", event => { this.onDelete(); });
-	        if (isOwner) {
-	            editPart = typed_dom_1.h.div({
+	        this.onEnterComment = _ => { };
+	        this.modelPost = modelPost;
+	        this.modelComments = modelComments;
+	        this.isOwner = isOwner;
+	        this.userName = userName;
+	        this.dom = typed_dom_1.h.div({ "class": "postWrapper" }, [
+	            this.datePart(),
+	            this.editPart(),
+	            this.contentPart(),
+	            this.commentPart()
+	        ]);
+	    }
+	    datePart() {
+	        return typed_dom_1.h.div({ "class": "dateLabel" }, [
+	            kanjidate.format(kanjidate.f1, this.modelPost.createdAt)
+	        ]);
+	    }
+	    editPart() {
+	        if (this.isOwner) {
+	            let editLink = typed_dom_1.h.a({ "class": "cmd-link" }, ["編集"]);
+	            editLink.addEventListener("click", event => { this.onEdit(); });
+	            let deleteLink = typed_dom_1.h.a({ "class": "cmd-link" }, ["削除"]);
+	            deleteLink.addEventListener("click", event => { this.onDelete(); });
+	            return typed_dom_1.h.div({
 	                style: "border:1px solid #ccc; padding: 6px"
 	            }, [
 	                editLink,
@@ -10881,19 +10884,73 @@
 	                deleteLink,
 	            ]);
 	        }
-	        let content = typed_dom_1.h.div({ "class": "content" }, formatContent(modelPost.content));
-	        let comment = null;
-	        if (!isOwner) {
-	            comment = commentPart(modelComments);
+	        else {
+	            return null;
 	        }
-	        this.dom = typed_dom_1.h.div({ "class": "postWrapper" }, [
-	            typed_dom_1.h.div({ "class": "dateLabel" }, [
-	                kanjidate.format(kanjidate.f1, modelPost.createdAt)
-	            ]),
-	            editPart,
-	            content,
-	            comment
+	    }
+	    contentPart() {
+	        return typed_dom_1.h.div({ "class": "content" }, formatContent(this.modelPost.content));
+	    }
+	    commentPart() {
+	        return typed_dom_1.h.table({
+	            "width": "100%",
+	            "class": "commentListWrapper"
+	        }, [
+	            typed_dom_1.h.tbody({}, [
+	                typed_dom_1.h.tr({ "valign": "top" }, [
+	                    typed_dom_1.h.td({ "width": "50%" }, this.modelComments.map(c => {
+	                        return typed_dom_1.h.div({}, [
+	                            c.name, " ", c.content
+	                        ]);
+	                    })),
+	                    typed_dom_1.h.td({ "width": "50%" }, [
+	                        this.commentFormPart()
+	                    ])
+	                ])
+	            ])
 	        ]);
+	    }
+	    commentFormPart() {
+	        let input = typed_dom_1.h.input({ "value": this.defaultInputValue() }, []);
+	        let enterButton = typed_dom_1.h.button({}, ["入力"]);
+	        enterButton.addEventListener("click", event => {
+	            let c = new intraclinic_comment_1.IntraclinicComment();
+	            c.name = this.userName;
+	            c.content = input.value.trim();
+	            c.postId = this.modelPost.id;
+	            c.createdAt = moment().format("YYYY-MM-DD");
+	            if (c.content === "") {
+	                alert("コメントの内容が入力されていません。");
+	                return;
+	            }
+	            this.onEnterComment(c);
+	        });
+	        return typed_dom_1.h.div({}, [
+	            "コメント追加",
+	            " ",
+	            input,
+	            " ",
+	            enterButton
+	        ]);
+	    }
+	    defaultInputValue() {
+	        if (this.isOwner) {
+	            return "";
+	        }
+	        else {
+	            let value = "";
+	            let hasSeen = false;
+	            let comments = this.modelComments;
+	            let userName = this.userName;
+	            for (let i = 0; i < comments.length; i++) {
+	                let c = comments[i];
+	                if (c.name === userName && c.content === "閲覧しました。") {
+	                    hasSeen = true;
+	                    break;
+	                }
+	            }
+	            return hasSeen ? "" : "閲覧しました。";
+	        }
 	    }
 	}
 	exports.Post = Post;

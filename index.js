@@ -44,7 +44,6 @@ function initApp(app, config, subpath) {
 			res.redirect(req.baseUrl + "/login.html");
 			return;
 		}
-		console.log(req.session.user);
 		next();
 	});
 	app.get("/whoami", function(req, res){
