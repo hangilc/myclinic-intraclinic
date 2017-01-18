@@ -8,7 +8,11 @@ export class PostForm {
 	onCancel: () => void = () => {};
 
 	constructor(post: IntraclinicPost){
-		let content = h.textarea({"rows": "16", "cols": "40"}, []);
+		console.log("content", post.content);
+		let content = h.textarea({
+			"rows": "16", 
+			"cols": "40"
+		}, [post.content]);
 		let enter = h.button({}, ["入力"]);
 		enter.addEventListener("click", event => {
 			post.content = content.value;

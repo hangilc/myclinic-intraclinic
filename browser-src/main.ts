@@ -1,4 +1,4 @@
-import { h, appendToElement } from "./typed-dom";
+import { h, appendToElement, removeElement } from "./typed-dom";
 import * as $ from "jquery";
 import * as service from "./service";
 import { NavManager } from "./nav";
@@ -121,20 +121,45 @@ async function start(user: User){
 			let postId = post.id;
 			let comments = await service.listIntraclinicComments(postId);
 			let p = new Post(post, comments, isOwner);
-			p.onDelete = async () => {
-				let comments = await service.listIntraclinicComments(postId);
-				if( comments.length > 0 ){
-					alert("コメントのある投稿は削除できません。");
-					return;
-				}
-				if( !confirm("この投稿を削除していいですか？") ){
-					return;
-				}
-				await service.deleteIntraclinicPost(postId);
-				fullUpdate();
-			};
+			p.onEdit = makeOnEditCallback(p, post, fullUpdate);
+			p.onDelete = makeOnDeleteCallback(postId, fullUpdate);
 			postsWrapper.appendChild(p.dom);
 		};
+	}
+}
+
+function makeOnEditCallback(post: Post, postModel: IntraclinicPost,
+	updater: () => void){
+	return async function(){
+		let form = new PostForm(postModel);
+		form.onEnter = async () => {
+			await service.updateIntraclinicPost(postModel.id, postModel.content);
+			updater();
+		};
+		form.onCancel = () => {
+			removeElement(form.dom);
+			post.dom.style.display = "";
+		}
+		post.dom.style.display = "none";
+		let parent = post.dom.parentNode;
+		if( parent !== null ){
+			parent.insertBefore(form.dom, post.dom);
+		}
+	}
+}
+
+function makeOnDeleteCallback(postId: number, updater: () => void){
+	return async function(){
+		let comments = await service.listIntraclinicComments(postId);
+		if( comments.length > 0 ){
+			alert("コメントのある投稿は削除できません。");
+			return;
+		}
+		if( !confirm("この投稿を削除していいですか？") ){
+			return;
+		}
+		await service.deleteIntraclinicPost(postId);
+		updater();
 	}
 }
 

@@ -77,3 +77,10 @@ export function appendToElement(element: HTMLElement, children: (HTMLElement|str
 		}
 	});
 }
+
+export function removeElement(element: HTMLElement){
+	let parent = element.parentNode;
+	if( parent !== null ){
+		parent.removeChild(element);
+	}
+}

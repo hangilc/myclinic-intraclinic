@@ -79,3 +79,10 @@ function appendToElement(element, children) {
     });
 }
 exports.appendToElement = appendToElement;
+function removeElement(element) {
+    let parent = element.parentNode;
+    if (parent !== null) {
+        parent.removeChild(element);
+    }
+}
+exports.removeElement = removeElement;

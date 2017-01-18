@@ -168,24 +168,50 @@
 	                    let postId = post.id;
 	                    let comments = yield service.listIntraclinicComments(postId);
 	                    let p = new post_1.Post(post, comments, isOwner);
-	                    p.onDelete = () => __awaiter(this, void 0, void 0, function* () {
-	                        let comments = yield service.listIntraclinicComments(postId);
-	                        if (comments.length > 0) {
-	                            alert("コメントのある投稿は削除できません。");
-	                            return;
-	                        }
-	                        if (!confirm("この投稿を削除していいですか？")) {
-	                            return;
-	                        }
-	                        yield service.deleteIntraclinicPost(postId);
-	                        fullUpdate();
-	                    });
+	                    p.onEdit = makeOnEditCallback(p, post, fullUpdate);
+	                    p.onDelete = makeOnDeleteCallback(postId, fullUpdate);
 	                    postsWrapper.appendChild(p.dom);
 	                }
 	                ;
 	            });
 	        }
 	    });
+	}
+	function makeOnEditCallback(post, postModel, updater) {
+	    return function () {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            let form = new post_form_1.PostForm(postModel);
+	            form.onEnter = () => __awaiter(this, void 0, void 0, function* () {
+	                yield service.updateIntraclinicPost(postModel.id, postModel.content);
+	                updater();
+	            });
+	            form.onCancel = () => {
+	                typed_dom_1.removeElement(form.dom);
+	                post.dom.style.display = "";
+	            };
+	            post.dom.style.display = "none";
+	            let parent = post.dom.parentNode;
+	            if (parent !== null) {
+	                parent.insertBefore(form.dom, post.dom);
+	            }
+	        });
+	    };
+	}
+	function makeOnDeleteCallback(postId, updater) {
+	    return function () {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            let comments = yield service.listIntraclinicComments(postId);
+	            if (comments.length > 0) {
+	                alert("コメントのある投稿は削除できません。");
+	                return;
+	            }
+	            if (!confirm("この投稿を削除していいですか？")) {
+	                return;
+	            }
+	            yield service.deleteIntraclinicPost(postId);
+	            updater();
+	        });
+	    };
 	}
 
 
@@ -10785,6 +10811,13 @@
 	    });
 	}
 	exports.appendToElement = appendToElement;
+	function removeElement(element) {
+	    let parent = element.parentNode;
+	    if (parent !== null) {
+	        parent.removeChild(element);
+	    }
+	}
+	exports.removeElement = removeElement;
 
 
 /***/ },
@@ -11262,7 +11295,11 @@
 	    constructor(post) {
 	        this.onEnter = () => { };
 	        this.onCancel = () => { };
-	        let content = typed_dom_1.h.textarea({ "rows": "16", "cols": "40" }, []);
+	        console.log("content", post.content);
+	        let content = typed_dom_1.h.textarea({
+	            "rows": "16",
+	            "cols": "40"
+	        }, [post.content]);
 	        let enter = typed_dom_1.h.button({}, ["入力"]);
 	        enter.addEventListener("click", event => {
 	            post.content = content.value;

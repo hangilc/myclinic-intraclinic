@@ -5,7 +5,11 @@ class PostForm {
     constructor(post) {
         this.onEnter = () => { };
         this.onCancel = () => { };
-        let content = typed_dom_1.h.textarea({ "rows": "16", "cols": "40" }, []);
+        console.log("content", post.content);
+        let content = typed_dom_1.h.textarea({
+            "rows": "16",
+            "cols": "40"
+        }, [post.content]);
         let enter = typed_dom_1.h.button({}, ["入力"]);
         enter.addEventListener("click", event => {
             post.content = content.value;
