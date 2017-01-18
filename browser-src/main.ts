@@ -97,6 +97,10 @@ async function start(user: User){
 	navManager.triggerPageChange();
 
 	async function onEnter(id: number){
+		fullUpdate();
+	}
+
+	async function fullUpdate(){
 		await adaptToNumberOfPostsChange();
 		updatePosts();
 	}
@@ -112,11 +116,25 @@ async function start(user: User){
 			navManager.getPostsperPage()
 		);
 		postsWrapper.innerHTML = "";
-		posts.forEach(async post => {
-			let comments = await service.listIntraclinicComment(post.id);
+		for(let i=0;i<posts.length;i++){
+			let post = posts[i];
+			let postId = post.id;
+			let comments = await service.listIntraclinicComments(postId);
 			let p = new Post(post, comments, isOwner);
+			p.onDelete = async () => {
+				let comments = await service.listIntraclinicComments(postId);
+				if( comments.length > 0 ){
+					alert("コメントのある投稿は削除できません。");
+					return;
+				}
+				if( !confirm("この投稿を削除していいですか？") ){
+					return;
+				}
+				await service.deleteIntraclinicPost(postId);
+				fullUpdate();
+			};
 			postsWrapper.appendChild(p.dom);
-		})
+		};
 	}
 }
 

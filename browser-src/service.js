@@ -41,14 +41,14 @@ function getIntraclinicPost(id) {
     });
 }
 exports.getIntraclinicPost = getIntraclinicPost;
-function listIntraclinicComment(postId) {
+function listIntraclinicComments(postId) {
     return __awaiter(this, void 0, void 0, function* () {
         return request_1.request("/service?_q=list_intra_clinic_comments", {
             post_id: postId
         }, "GET", CommentArrayConverter);
     });
 }
-exports.listIntraclinicComment = listIntraclinicComment;
+exports.listIntraclinicComments = listIntraclinicComments;
 function enterIntraclinicPost(content, createdAt) {
     return __awaiter(this, void 0, void 0, function* () {
         return request_1.request("/service?_q=enter_intra_clinic_post", {

@@ -98,6 +98,11 @@ function start(user) {
         navManager.triggerPageChange();
         function onEnter(id) {
             return __awaiter(this, void 0, void 0, function* () {
+                fullUpdate();
+            });
+        }
+        function fullUpdate() {
+            return __awaiter(this, void 0, void 0, function* () {
                 yield adaptToNumberOfPostsChange();
                 updatePosts();
             });
@@ -112,11 +117,26 @@ function start(user) {
             return __awaiter(this, void 0, void 0, function* () {
                 let posts = yield service.listIntraclinicPosts(navManager.getCurrentOffset(), navManager.getPostsperPage());
                 postsWrapper.innerHTML = "";
-                posts.forEach((post) => __awaiter(this, void 0, void 0, function* () {
-                    let comments = yield service.listIntraclinicComment(post.id);
+                for (let i = 0; i < posts.length; i++) {
+                    let post = posts[i];
+                    let postId = post.id;
+                    let comments = yield service.listIntraclinicComments(postId);
                     let p = new post_1.Post(post, comments, isOwner);
+                    p.onDelete = () => __awaiter(this, void 0, void 0, function* () {
+                        let comments = yield service.listIntraclinicComments(postId);
+                        if (comments.length > 0) {
+                            alert("コメントのある投稿は削除できません。");
+                            return;
+                        }
+                        if (!confirm("この投稿を削除していいですか？")) {
+                            return;
+                        }
+                        yield service.deleteIntraclinicPost(postId);
+                        fullUpdate();
+                    });
                     postsWrapper.appendChild(p.dom);
-                }));
+                }
+                ;
             });
         }
     });

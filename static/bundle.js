@@ -144,6 +144,11 @@
 	        navManager.triggerPageChange();
 	        function onEnter(id) {
 	            return __awaiter(this, void 0, void 0, function* () {
+	                fullUpdate();
+	            });
+	        }
+	        function fullUpdate() {
+	            return __awaiter(this, void 0, void 0, function* () {
 	                yield adaptToNumberOfPostsChange();
 	                updatePosts();
 	            });
@@ -158,11 +163,26 @@
 	            return __awaiter(this, void 0, void 0, function* () {
 	                let posts = yield service.listIntraclinicPosts(navManager.getCurrentOffset(), navManager.getPostsperPage());
 	                postsWrapper.innerHTML = "";
-	                posts.forEach((post) => __awaiter(this, void 0, void 0, function* () {
-	                    let comments = yield service.listIntraclinicComment(post.id);
+	                for (let i = 0; i < posts.length; i++) {
+	                    let post = posts[i];
+	                    let postId = post.id;
+	                    let comments = yield service.listIntraclinicComments(postId);
 	                    let p = new post_1.Post(post, comments, isOwner);
+	                    p.onDelete = () => __awaiter(this, void 0, void 0, function* () {
+	                        let comments = yield service.listIntraclinicComments(postId);
+	                        if (comments.length > 0) {
+	                            alert("コメントのある投稿は削除できません。");
+	                            return;
+	                        }
+	                        if (!confirm("この投稿を削除していいですか？")) {
+	                            return;
+	                        }
+	                        yield service.deleteIntraclinicPost(postId);
+	                        fullUpdate();
+	                    });
 	                    postsWrapper.appendChild(p.dom);
-	                }));
+	                }
+	                ;
 	            });
 	        }
 	    });
@@ -10442,14 +10462,14 @@
 	    });
 	}
 	exports.getIntraclinicPost = getIntraclinicPost;
-	function listIntraclinicComment(postId) {
+	function listIntraclinicComments(postId) {
 	    return __awaiter(this, void 0, void 0, function* () {
 	        return request_1.request("/service?_q=list_intra_clinic_comments", {
 	            post_id: postId
 	        }, "GET", CommentArrayConverter);
 	    });
 	}
-	exports.listIntraclinicComment = listIntraclinicComment;
+	exports.listIntraclinicComments = listIntraclinicComments;
 	function enterIntraclinicPost(content, createdAt) {
 	    return __awaiter(this, void 0, void 0, function* () {
 	        return request_1.request("/service?_q=enter_intra_clinic_post", {
@@ -10812,14 +10832,20 @@
 	}
 	class Post {
 	    constructor(modelPost, modelComments, isOwner) {
+	        this.onEdit = () => { };
+	        this.onDelete = () => { };
 	        let editPart = null;
+	        let editLink = typed_dom_1.h.a({ "class": "cmd-link" }, ["編集"]);
+	        editLink.addEventListener("click", event => { this.onEdit(); });
+	        let deleteLink = typed_dom_1.h.a({ "class": "cmd-link" }, ["削除"]);
+	        deleteLink.addEventListener("click", event => { this.onDelete(); });
 	        if (isOwner) {
 	            editPart = typed_dom_1.h.div({
 	                style: "border:1px solid #ccc; padding: 6px"
 	            }, [
-	                typed_dom_1.h.a({ "class": "cmd-link" }, ["編集"]),
+	                editLink,
 	                " ",
-	                typed_dom_1.h.a({ "class": "cmd-link" }, ["削除"]),
+	                deleteLink,
 	            ]);
 	        }
 	        let content = typed_dom_1.h.div({ "class": "content" }, formatContent(modelPost.content));

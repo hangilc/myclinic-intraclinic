@@ -39,14 +39,20 @@ function commentPart(comments) {
 }
 class Post {
     constructor(modelPost, modelComments, isOwner) {
+        this.onEdit = () => { };
+        this.onDelete = () => { };
         let editPart = null;
+        let editLink = typed_dom_1.h.a({ "class": "cmd-link" }, ["編集"]);
+        editLink.addEventListener("click", event => { this.onEdit(); });
+        let deleteLink = typed_dom_1.h.a({ "class": "cmd-link" }, ["削除"]);
+        deleteLink.addEventListener("click", event => { this.onDelete(); });
         if (isOwner) {
             editPart = typed_dom_1.h.div({
                 style: "border:1px solid #ccc; padding: 6px"
             }, [
-                typed_dom_1.h.a({ "class": "cmd-link" }, ["編集"]),
+                editLink,
                 " ",
-                typed_dom_1.h.a({ "class": "cmd-link" }, ["削除"]),
+                deleteLink,
             ]);
         }
         let content = typed_dom_1.h.div({ "class": "content" }, formatContent(modelPost.content));

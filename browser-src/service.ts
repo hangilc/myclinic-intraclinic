@@ -30,7 +30,7 @@ export async function getIntraclinicPost(id: number): Promise<IntraclinicPost> {
 	}, "GET", jsonToIntraclinicPost);
 }
 
-export async function listIntraclinicComment(postId: number): Promise<IntraclinicComment[]> {
+export async function listIntraclinicComments(postId: number): Promise<IntraclinicComment[]> {
 	return request("/service?_q=list_intra_clinic_comments", {
 		post_id: postId
 	}, "GET", CommentArrayConverter);

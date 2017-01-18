@@ -43,16 +43,22 @@ function commentPart(comments: IntraclinicComment[]): HTMLElement {
 
 export class Post {
 	dom: HTMLElement;
+	onEdit: () => void = () => {};
+	onDelete: () => void = () => {};
 
 	constructor(modelPost: IntraclinicPost, modelComments: IntraclinicComment[], isOwner: boolean){
 		let editPart: HTMLElement | null = null;
+		let editLink = h.a({"class": "cmd-link"}, ["編集"]);
+		editLink.addEventListener("click", event => { this.onEdit() });
+		let deleteLink = h.a({"class": "cmd-link"}, ["削除"]);
+		deleteLink.addEventListener("click", event => { this.onDelete() });
 		if( isOwner ){
 			editPart = h.div({
 				style: "border:1px solid #ccc; padding: 6px"
 			}, [
-				h.a({"class": "cmd-link"}, ["編集"]),
+				editLink,
 				" ",
-				h.a({"class": "cmd-link"}, ["削除"]),
+				deleteLink,
 			]);
 		}
 		let content = h.div({"class": "content"}, formatContent(modelPost.content));
