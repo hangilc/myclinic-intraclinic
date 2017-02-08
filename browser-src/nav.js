@@ -1,109 +1,94 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 const typed_dom_1 = require("./typed-dom");
-class Nav {
+const service = require("./service");
+class NavMode {
     constructor() {
-        this.prevLink = typed_dom_1.h.a({ href: undefined }, ["<"]);
-        this.nextLink = typed_dom_1.h.a({ href: undefined }, [">"]);
-        this.dom = typed_dom_1.h.span({}, [
-            this.prevLink,
-            " ",
-            this.nextLink
-        ]);
-    }
-    onPrevLinkClick(cb) {
-        this.prevLink.addEventListener("click", cb);
-    }
-    onNextLinkClick(cb) {
-        this.nextLink.addEventListener("click", cb);
-    }
-    enablePrev(enable) {
-        if (enable) {
-            this.prevLink.href = "javascript: void(0)";
-        }
-        else {
-            delete this.prevLink.href;
-        }
-    }
-    enableNext(enable) {
-        if (enable) {
-            this.nextLink.href = "javascript: void(0)";
-        }
-        else {
-            delete this.nextLink.href;
-        }
-    }
-}
-exports.Nav = Nav;
-function calcNumberOfPages(totalItems, itemsPerPage) {
-    return Math.floor((totalItems + itemsPerPage - 1) / itemsPerPage);
-}
-class NavManager {
-    constructor() {
-        this.postsPerPage = 10;
-        this.nPosts = 0;
-        this.nPages = 0;
-        this.currentPage = 1;
-        this.navs = [];
-        this.onPageChange = () => { };
-    }
-    createNav() {
-        let nav = new Nav();
-        nav.onPrevLinkClick(event => {
-            this.gotoPrev();
-        });
-        nav.onNextLinkClick(event => {
-            this.gotoNext();
-        });
-        this.navs.push(nav);
-        this.updateNavs();
-        return nav.dom;
-    }
-    updateTotalNumberOfPosts(nPosts) {
-        this.nPosts = nPosts;
-        this.nPages = calcNumberOfPages(nPosts, this.postsPerPage);
-        if (this.currentPage > this.nPages) {
-            if (this.nPages > 0) {
-                this.currentPage = this.nPages;
-            }
-            else {
-                this.currentPage = 1;
-            }
-        }
-        this.updateNavs();
-    }
-    getCurrentOffset() {
-        return (this.currentPage - 1) * this.postsPerPage;
-    }
-    getPostsperPage() {
-        return this.postsPerPage;
+        this.onPageChange = (_) => { };
     }
     setOnPageChange(cb) {
         this.onPageChange = cb;
     }
     triggerPageChange() {
-        this.onPageChange();
-    }
-    updateNavs() {
-        let enablePrev = this.currentPage > 1;
-        let enableNext = this.currentPage < this.nPages;
-        this.navs.forEach(nav => {
-            nav.enablePrev(enablePrev);
-            nav.enableNext(enableNext);
+        return __awaiter(this, void 0, void 0, function* () {
+            let posts = yield this.fetchPages();
+            this.onPageChange(posts);
         });
     }
-    gotoPrev() {
-        if (this.currentPage > 1) {
-            this.currentPage -= 1;
-            this.updateNavs();
-            this.onPageChange();
-        }
-    }
-    gotoNext() {
-        if (this.currentPage < this.nPages) {
-            this.currentPage += 1;
-            this.updateNavs();
-            this.onPageChange();
-        }
+    calcNumberOfPages(totalItems, itemsPerPage) {
+        return Math.floor((totalItems + itemsPerPage - 1) / itemsPerPage);
     }
 }
-exports.NavManager = NavManager;
+class DefaultNav extends NavMode {
+    constructor() {
+        super(...arguments);
+        this.itemsPerPage = 10;
+        this.currentPage = 0;
+        this.totalPages = 0;
+        this.domList = [];
+    }
+    createDom() {
+        let dom = typed_dom_1.h.div({}, []);
+        this.domList.push(dom);
+        return dom;
+    }
+    update() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let nPosts = yield service.countIntraclinicPosts();
+            this.totalPages = this.calcNumberOfPages(nPosts, this.itemsPerPage);
+            if (this.totalPages <= 0) {
+                this.currentPage = 0;
+            }
+            else if (this.currentPage >= this.totalPages) {
+                this.currentPage = this.totalPages - 1;
+            }
+            this.domList.forEach(dom => { this.updateDom(dom); });
+        });
+    }
+    updateDom(dom) {
+        let prev = typed_dom_1.h.a({}, ["<"]);
+        let next = typed_dom_1.h.a({}, [">"]);
+        dom.innerHTML = "";
+        if (this.totalPages > 1) {
+            typed_dom_1.appendToElement(dom, [
+                prev,
+                " ",
+                next
+            ]);
+        }
+    }
+    fetchPages() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let offset = this.currentPage * this.itemsPerPage;
+            return service.listIntraclinicPosts(offset, this.itemsPerPage);
+        });
+    }
+}
+class Nav {
+    constructor() {
+        this.onPageChange = (_) => { };
+        this.mode = new DefaultNav();
+    }
+    createDom() {
+        return this.mode.createDom();
+    }
+    setOnPageChange(cb) {
+        this.mode.setOnPageChange(cb);
+    }
+    update() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.mode.update();
+        });
+    }
+    triggerPageChange() {
+        this.mode.triggerPageChange();
+    }
+}
+exports.Nav = Nav;

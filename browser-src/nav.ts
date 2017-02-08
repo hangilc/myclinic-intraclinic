@@ -1,125 +1,91 @@
-import { h } from "./typed-dom";
+import { h, appendToElement } from "./typed-dom";
+import { IntraclinicPost } from "./model/intraclinic-post";
+import * as service from "./service";
 
-export class Nav {
-	dom: HTMLElement;
-	private prevLink: HTMLAnchorElement;
-	private nextLink: HTMLAnchorElement;
+abstract class NavMode {
+	abstract createDom(): HTMLElement;
+	abstract async fetchPages(): Promise<IntraclinicPost[]>;
+	abstract async update(): Promise<void>;
+	
+	onPageChange: (posts: IntraclinicPost[]) => void = (_) => {};
 
-	constructor(){
-		this.prevLink = h.a({ href: undefined }, ["<"]);
-		this.nextLink = h.a({ href: undefined }, [">"]);
-		this.dom = h.span({}, [
-			this.prevLink,
-			" ",
-			this.nextLink
-		]);
-	}
-
-	onPrevLinkClick(cb: (event: Event) => void){
-		this.prevLink.addEventListener("click", cb);
-	}
-
-	onNextLinkClick(cb: (event: Event) => void){
-		this.nextLink.addEventListener("click", cb);
-	}
-
-	enablePrev(enable: boolean){
-		if( enable ){
-			this.prevLink.href = "javascript: void(0)";
-		} else {
-			delete this.prevLink.href;
-		}
-	}
-
-	enableNext(enable: boolean){
-		if( enable ){
-			this.nextLink.href = "javascript: void(0)";
-		} else {
-			delete this.nextLink.href;
-		}
-	}
-}
-
-function calcNumberOfPages(totalItems: number, itemsPerPage: number): number {
-	return Math.floor((totalItems + itemsPerPage - 1) / itemsPerPage);
-}
-
-export class NavManager {
-	private postsPerPage: number = 10;
-	private nPosts: number = 0;
-	private nPages: number = 0;
-	private currentPage: number = 1;
-	private navs: Nav[] = [];
-	private onPageChange: () => void = () => {};
-
-	constructor(){
-
-	}
-
-	createNav(): HTMLElement {
-		let nav = new Nav();
-		nav.onPrevLinkClick(event => {
-			this.gotoPrev();
-		})
-		nav.onNextLinkClick(event => {
-			this.gotoNext();
-		})
-		this.navs.push(nav);
-		this.updateNavs();
-		return nav.dom;
-	}
-
-	updateTotalNumberOfPosts(nPosts: number) {
-		this.nPosts = nPosts;
-		this.nPages = calcNumberOfPages(nPosts, this.postsPerPage);
-		if( this.currentPage > this.nPages ){
-			if( this.nPages > 0 ){
-				this.currentPage = this.nPages;
-			} else {
-				this.currentPage = 1;
-			}
-		}
-		this.updateNavs();
-	}
-
-	getCurrentOffset(): number {
-		return (this.currentPage - 1) * this.postsPerPage;
-	}
-
-	getPostsperPage(): number {
-		return this.postsPerPage;
-	}
-
-	setOnPageChange(cb: () => void){
+	setOnPageChange(cb: (posts: IntraclinicPost[]) => void): void {
 		this.onPageChange = cb;
 	}
 
-	triggerPageChange() {
-		this.onPageChange();
+	async triggerPageChange() {
+		let posts = await this.fetchPages();
+		this.onPageChange(posts);
 	}
 
-	private updateNavs(){
-		let enablePrev = this.currentPage > 1;
-		let enableNext = this.currentPage < this.nPages;
-		this.navs.forEach(nav => {
-			nav.enablePrev(enablePrev);
-			nav.enableNext(enableNext);
-		})
+	calcNumberOfPages(totalItems: number, itemsPerPage: number): number {
+		return Math.floor((totalItems + itemsPerPage - 1) / itemsPerPage);
+	}
+}
+
+class DefaultNav extends NavMode {
+	private itemsPerPage: number = 10;
+	private currentPage: number = 0;
+	private totalPages: number = 0;
+	private domList: HTMLElement[] = [];
+
+	createDom(): HTMLElement {
+		let dom = h.div({}, []);
+		this.domList.push(dom);
+		return dom;
 	}
 
-	private gotoPrev(){
-		if( this.currentPage > 1 ){
-			this.currentPage -= 1;
-			this.updateNavs();
-			this.onPageChange();
+	async update(): Promise<void> {
+		let nPosts = await service.countIntraclinicPosts();
+		this.totalPages = this.calcNumberOfPages(nPosts, this.itemsPerPage);
+		if( this.totalPages <= 0 ){
+			this.currentPage = 0;
+		} else if( this.currentPage >= this.totalPages ) {
+			this.currentPage = this.totalPages - 1;
+		}
+		this.domList.forEach(dom => { this.updateDom(dom)} );
+	}
+
+	updateDom(dom: HTMLElement): void {
+		let prev = h.a({}, ["<"]);
+		let next = h.a({}, [">"]);
+		dom.innerHTML = "";
+		if( this.totalPages > 1 ){
+			appendToElement(dom, [
+				prev,
+				" ",
+				next
+			]);
 		}
 	}
 
-	private gotoNext(){
-		if( this.currentPage < this.nPages ){
-			this.currentPage += 1;
-			this.updateNavs();
-			this.onPageChange();
-		}
+	async fetchPages(): Promise<IntraclinicPost[]> {
+		let offset = this.currentPage * this.itemsPerPage;
+		return service.listIntraclinicPosts(offset, this.itemsPerPage);
+	}
+}
+
+export class Nav {
+	onPageChange: (posts: IntraclinicPost[]) => void = (_) => {};
+	mode: NavMode;
+
+	constructor(){
+		this.mode = new DefaultNav();
+	}
+
+	createDom(): HTMLElement {
+		return this.mode.createDom();
+	}
+
+	setOnPageChange(cb: (posts: IntraclinicPost[]) => void): void {
+		this.mode.setOnPageChange(cb);
+	}
+
+	async update(): Promise<void> {
+		await this.mode.update();
+	}
+
+	triggerPageChange(): void {
+		this.mode.triggerPageChange();
 	}
 }

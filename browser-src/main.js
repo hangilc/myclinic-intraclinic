@@ -9,170 +9,119 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 const typed_dom_1 = require("./typed-dom");
 const $ = require("jquery");
-const service = require("./service");
 const nav_1 = require("./nav");
+const service = require("./service");
 const post_1 = require("./post");
-const post_form_1 = require("./post-form");
-const intraclinic_post_1 = require("./model/intraclinic-post");
-const moment = require("moment");
+class User {
+    constructor(name, role, label) {
+        this.name = name;
+        this.role = role;
+        this.label = label;
+    }
+    isOwner() {
+        return this.role === "owner";
+    }
+    isStaff() {
+        return this.role === "staff";
+    }
+}
 $.ajax({
     url: "whoami",
     success: function (user) {
         if (user === null) {
             user = {};
         }
-        start(user);
+        let main = new Main(new User(user.name, user.role, user.label));
+        document.body.appendChild(main.dom);
+        main.setup();
     }
 });
-function createNewIntraclinicPost() {
-    let post = new intraclinic_post_1.IntraclinicPost();
-    post.createdAt = moment().format("YYYY-MM-DD");
-    post.content = "";
-    post.id = 0;
-    return post;
-}
-function userDisp(name) {
-    return typed_dom_1.h.div({ "id": "newPostWrapper" }, [
-        "ユーザー名：",
-        name,
-        " ",
-        typed_dom_1.h.a({ href: "logout" }, ["ログアウト"])
-    ]);
-}
-function editPart(isOwner, onEnter) {
-    if (isOwner) {
-        let startEdit = typed_dom_1.h.a({}, ["新規投稿"]);
-        let editorWrapper = typed_dom_1.h.div({}, []);
-        startEdit.addEventListener("click", event => {
-            if (editorWrapper.firstChild !== null) {
-                return;
-            }
-            let post = createNewIntraclinicPost();
-            let form = new post_form_1.PostForm(post);
-            form.onEnter = () => __awaiter(this, void 0, void 0, function* () {
-                let id = yield service.enterIntraclinicPost(post.content, post.createdAt);
-                editorWrapper.innerHTML = "";
-                onEnter(id);
-            });
-            form.onCancel = () => {
-                editorWrapper.innerHTML = "";
-            };
-            editorWrapper.appendChild(form.dom);
-        });
-        return typed_dom_1.h.div({}, [
-            startEdit,
-            editorWrapper
-        ]);
-    }
-    else {
-        return null;
+class PostWithComments {
+    constructor(post, comments) {
+        this.post = post;
+        this.comments = comments;
     }
 }
-function start(user) {
-    return __awaiter(this, void 0, void 0, function* () {
-        let role = user.role;
-        let isOwner = false;
-        if (role === "owner") {
-            isOwner = true;
-        }
-        else if (role === "staff") {
-            ; // nop
-        }
-        else {
+class Main {
+    constructor(user) {
+        this.user = user;
+        if (!(user.isOwner() || user.isStaff())) {
+            this.dom = typed_dom_1.h.div({}, ["Login required."]);
             return;
         }
-        let navManager = new nav_1.NavManager();
-        yield adaptToNumberOfPostsChange();
-        navManager.setOnPageChange(() => {
-            updatePosts();
-        });
-        let postsWrapper = typed_dom_1.h.div({}, []);
-        typed_dom_1.appendToElement(document.body, [
+        this.nav = new nav_1.Nav();
+        this.nav.setOnPageChange(posts => { this.onPageChange(posts); });
+        this.postsWrapper = typed_dom_1.h.div({}, []);
+        this.dom = typed_dom_1.h.div({}, [
             typed_dom_1.h.h1({}, ["院内ミーティング"]),
-            userDisp(user.label),
-            editPart(isOwner, onEnter),
-            navManager.createNav(),
-            postsWrapper,
-            navManager.createNav()
+            this.userDisp(),
+            this.editPart(),
+            this.nav.createDom(),
+            this.postsWrapper,
+            this.nav.createDom()
         ]);
-        navManager.triggerPageChange();
-        function onEnter(id) {
-            return __awaiter(this, void 0, void 0, function* () {
-                fullUpdate();
-            });
-        }
-        function fullUpdate() {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield adaptToNumberOfPostsChange();
-                updatePosts();
-            });
-        }
-        function adaptToNumberOfPostsChange() {
-            return __awaiter(this, void 0, void 0, function* () {
-                let nPosts = yield service.countIntraclinicPosts();
-                navManager.updateTotalNumberOfPosts(nPosts);
-            });
-        }
-        function updatePosts() {
-            return __awaiter(this, void 0, void 0, function* () {
-                let posts = yield service.listIntraclinicPosts(navManager.getCurrentOffset(), navManager.getPostsperPage());
-                postsWrapper.innerHTML = "";
-                for (let i = 0; i < posts.length; i++) {
-                    let post = posts[i];
-                    let postId = post.id;
-                    let comments = yield service.listIntraclinicComments(postId);
-                    let p = new post_1.Post(post, comments, isOwner, user.label);
-                    p.onEdit = makeOnEditCallback(p, post, fullUpdate);
-                    p.onDelete = makeOnDeleteCallback(postId, fullUpdate);
-                    p.onEnterComment = makeOnEnterCommentCallback(updatePosts);
-                    postsWrapper.appendChild(p.dom);
-                }
-                ;
-            });
-        }
-    });
-}
-function makeOnEditCallback(post, postModel, updater) {
-    return function () {
+    }
+    setup() {
         return __awaiter(this, void 0, void 0, function* () {
-            let form = new post_form_1.PostForm(postModel);
-            form.onEnter = () => __awaiter(this, void 0, void 0, function* () {
-                yield service.updateIntraclinicPost(postModel.id, postModel.content);
-                updater();
-            });
-            form.onCancel = () => {
-                typed_dom_1.removeElement(form.dom);
-                post.dom.style.display = "";
-            };
-            post.dom.style.display = "none";
-            let parent = post.dom.parentNode;
-            if (parent !== null) {
-                parent.insertBefore(form.dom, post.dom);
-            }
+            yield this.nav.update();
+            this.nav.triggerPageChange();
         });
-    };
-}
-function makeOnDeleteCallback(postId, updater) {
-    return function () {
-        return __awaiter(this, void 0, void 0, function* () {
-            let comments = yield service.listIntraclinicComments(postId);
-            if (comments.length > 0) {
-                alert("コメントのある投稿は削除できません。");
-                return;
-            }
-            if (!confirm("この投稿を削除していいですか？")) {
-                return;
-            }
-            yield service.deleteIntraclinicPost(postId);
-            updater();
+    }
+    userDisp() {
+        return typed_dom_1.h.div({ "id": "newPostWrapper" }, [
+            "ユーザー名：",
+            this.user.name,
+            " ",
+            typed_dom_1.h.a({ href: "logout" }, ["ログアウト"])
+        ]);
+    }
+    editPart() {
+        if (this.user.isOwner()) {
+            let startEdit = typed_dom_1.h.a({}, ["新規投稿"]);
+            let editorWrapper = typed_dom_1.h.div({}, []);
+            // startEdit.addEventListener("click", event => {
+            // 	if( editorWrapper.firstChild !== null ){
+            // 		return;
+            // 	}
+            // 	let post = createNewIntraclinicPost();
+            // 	let form = new PostForm(post);
+            // 	form.onEnter = async () => {
+            // 		let id = await service.enterIntraclinicPost(post.content, post.createdAt);
+            // 		editorWrapper.innerHTML = "";
+            // 		onEnter(id);
+            // 	};
+            // 	form.onCancel = () => {
+            // 		editorWrapper.innerHTML = "";
+            // 	}
+            // 	editorWrapper.appendChild(form.dom);
+            // })
+            return typed_dom_1.h.div({}, [
+                startEdit,
+                editorWrapper
+            ]);
+        }
+        else {
+            return null;
+        }
+    }
+    onPageChange(posts) {
+        this.postsWrapper.innerHTML = "";
+        Promise.all(posts.map((post) => __awaiter(this, void 0, void 0, function* () {
+            let comments = yield service.listIntraclinicComments(post.id);
+            return new PostWithComments(post, comments);
+        })))
+            .then((posts) => {
+            this.renderPosts(posts);
+        })
+            .catch(err => {
+            console.log(err);
         });
-    };
-}
-function makeOnEnterCommentCallback(updater) {
-    return function (comment) {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield service.enterIntraclinicComment(comment.name, comment.content, comment.postId, comment.createdAt);
-            updater();
+    }
+    renderPosts(posts) {
+        let wrapper = this.postsWrapper;
+        posts.forEach(post => {
+            let p = new post_1.Post(post.post, post.comments, this.user.isOwner(), this.user.label);
+            wrapper.appendChild(p.dom);
         });
-    };
+    }
 }
