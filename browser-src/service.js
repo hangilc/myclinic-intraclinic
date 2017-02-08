@@ -86,3 +86,9 @@ function enterIntraclinicComment(name, content, postId, createdAt) {
     });
 }
 exports.enterIntraclinicComment = enterIntraclinicComment;
+function countIntraclinicOlderThan(date) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return request_1.request("/service?_q=count_intra_clinic_posts_older_than", { date: date }, "GET", toNumber);
+    });
+}
+exports.countIntraclinicOlderThan = countIntraclinicOlderThan;

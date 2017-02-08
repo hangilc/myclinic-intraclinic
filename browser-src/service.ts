@@ -64,3 +64,7 @@ export async function enterIntraclinicComment(name: string, content: string, pos
 		created_at: createdAt
 	}, "POST", toNumber);
 }
+
+export async function countIntraclinicOlderThan(date: string): Promise<number> {
+	return request("/service?_q=count_intra_clinic_posts_older_than", { date: date }, "GET", toNumber);
+}

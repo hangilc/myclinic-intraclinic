@@ -52,13 +52,14 @@ class Main {
             this.dom = typed_dom_1.h.div({}, ["Login required."]);
             return;
         }
-        this.nav = new nav_1.Nav();
-        this.nav.setOnPageChange(posts => { this.onPageChange(posts); });
+        this.nav = new nav_1.Nav(posts => { this.onPageChange(posts); });
         this.postsWrapper = typed_dom_1.h.div({}, []);
         this.dom = typed_dom_1.h.div({}, [
             typed_dom_1.h.h1({}, ["院内ミーティング"]),
             this.userDisp(),
             this.editPart(),
+            this.nav.navChoiceDom,
+            this.nav.navWorkarea,
             this.nav.createDom(),
             this.postsWrapper,
             this.nav.createDom()

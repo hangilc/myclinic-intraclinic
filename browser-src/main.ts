@@ -56,13 +56,14 @@ class Main {
 			this.dom = h.div({}, ["Login required."]);
 			return;
 		}
-		this.nav = new Nav();
-		this.nav.setOnPageChange(posts => { this.onPageChange(posts); })
+		this.nav = new Nav(posts => { this.onPageChange(posts); });
 		this.postsWrapper = h.div({}, []);
 		this.dom = h.div({}, [
 			h.h1({}, ["院内ミーティング"]),
 			this.userDisp(),
 			this.editPart(),
+			this.nav.navChoiceDom,
+			this.nav.navWorkarea,
 			this.nav.createDom(),
 			this.postsWrapper,
 			this.nav.createDom()
