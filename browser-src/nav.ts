@@ -93,14 +93,13 @@ class ByDateNav extends NavMode {
 			let numOlders = await service.countIntraclinicOlderThan(this.pivotDate);
 			let numNewers = numTotalPosts - numOlders;
 			let rem = numNewers % this.itemsPerPage;
-			console.log(numTotalPosts, numOlders, numNewers, rem);
 			if( rem === 0 ){
 				this.firstPageItems = this.itemsPerPage;
 				this.totalPages = this.calcNumberOfPages(numTotalPosts, this.itemsPerPage);
 				this.currentPage = numNewers / this.itemsPerPage;
 			} else {
 				this.firstPageItems = rem;
-				this.totalPages = this.calcNumberOfPages(numTotalPosts - rem, this.itemsPerPage);
+				this.totalPages = this.calcNumberOfPages(numTotalPosts - rem, this.itemsPerPage) + 1;
 				this.currentPage = (numNewers - rem) / this.itemsPerPage;
 			}
 		}
