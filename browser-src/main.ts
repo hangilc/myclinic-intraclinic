@@ -141,6 +141,7 @@ class Main {
 			let p = new Post(post.post, post.comments, this.user.isOwner(), this.user.label);
 			p.onEdit = this.makeOnEditCallback(p, post.post);
 			p.onDelete = this.makeOnDeleteCallback(post.post.id);
+			p.onEnterComment = this.makeOnEnterCommentCallback(p);
 			wrapper.appendChild(p.dom);
 		})
 	}
@@ -177,6 +178,15 @@ class Main {
 			await service.deleteIntraclinicPost(postId);
 			await this.nav.update();
 			this.nav.triggerPageChange();
+		}
+	}
+
+	private makeOnEnterCommentCallback(post: Post){
+		return async (comment: IntraclinicComment) => {
+			await service.enterIntraclinicComment(comment.name, comment.content, 
+				comment.postId, comment.createdAt);
+			let comments = await service.listIntraclinicComments(comment.postId);
+			post.updateCommentsArea(comments);
 		}
 	}
 

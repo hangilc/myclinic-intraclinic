@@ -1,4 +1,4 @@
-import { h } from "./typed-dom";
+import { h, appendToElement } from "./typed-dom";
 import { IntraclinicPost } from "./model/intraclinic-post";
 import { IntraclinicComment } from "./model/intraclinic-comment";
 import * as kanjidate from "kanjidate";
@@ -18,6 +18,7 @@ function formatContent(content: string): (string|HTMLElement)[] {
 
 export class Post {
 	dom: HTMLElement;
+	commentsWrapper: HTMLElement;
 	onEdit: () => void = () => {};
 	onDelete: () => void = () => {};
 	onEnterComment: (comment: IntraclinicComment) => void = _ => {};
@@ -32,12 +33,19 @@ export class Post {
 		this.modelComments = modelComments;
 		this.isOwner = isOwner;
 		this.userName = userName;
+		this.commentsWrapper = h.div({}, [this.commentPart()]);
 		this.dom = h.div({"class": "postWrapper"}, [
 			this.datePart(),
 			this.editPart(),
 			this.contentPart(),
-			this.commentPart()
+			this.commentsWrapper
 		]);
+	}
+
+	async updateCommentsArea(comments: IntraclinicComment[]): Promise<void> {
+		this.modelComments = comments;
+		this.commentsWrapper.innerHTML = "";
+		appendToElement(this.commentsWrapper, [this.commentPart()]);
 	}
 
 	private datePart(): HTMLElement {

@@ -180,6 +180,7 @@
 	            let p = new post_1.Post(post.post, post.comments, this.user.isOwner(), this.user.label);
 	            p.onEdit = this.makeOnEditCallback(p, post.post);
 	            p.onDelete = this.makeOnDeleteCallback(post.post.id);
+	            p.onEnterComment = this.makeOnEnterCommentCallback(p);
 	            wrapper.appendChild(p.dom);
 	        });
 	    }
@@ -214,6 +215,13 @@
 	            yield service.deleteIntraclinicPost(postId);
 	            yield this.nav.update();
 	            this.nav.triggerPageChange();
+	        });
+	    }
+	    makeOnEnterCommentCallback(post) {
+	        return (comment) => __awaiter(this, void 0, void 0, function* () {
+	            yield service.enterIntraclinicComment(comment.name, comment.content, comment.postId, comment.createdAt);
+	            let comments = yield service.listIntraclinicComments(comment.postId);
+	            post.updateCommentsArea(comments);
 	        });
 	    }
 	}
@@ -10826,6 +10834,14 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
+	var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+	    return new (P || (P = Promise))(function (resolve, reject) {
+	        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+	        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+	        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+	        step((generator = generator.apply(thisArg, _arguments || [])).next());
+	    });
+	};
 	const typed_dom_1 = __webpack_require__(1);
 	const intraclinic_comment_1 = __webpack_require__(6);
 	const kanjidate = __webpack_require__(9);
@@ -10850,12 +10866,20 @@
 	        this.modelComments = modelComments;
 	        this.isOwner = isOwner;
 	        this.userName = userName;
+	        this.commentsWrapper = typed_dom_1.h.div({}, [this.commentPart()]);
 	        this.dom = typed_dom_1.h.div({ "class": "postWrapper" }, [
 	            this.datePart(),
 	            this.editPart(),
 	            this.contentPart(),
-	            this.commentPart()
+	            this.commentsWrapper
 	        ]);
+	    }
+	    updateCommentsArea(comments) {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            this.modelComments = comments;
+	            this.commentsWrapper.innerHTML = "";
+	            typed_dom_1.appendToElement(this.commentsWrapper, [this.commentPart()]);
+	        });
 	    }
 	    datePart() {
 	        return typed_dom_1.h.div({ "class": "dateLabel" }, [

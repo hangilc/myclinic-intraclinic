@@ -134,6 +134,7 @@ class Main {
             let p = new post_1.Post(post.post, post.comments, this.user.isOwner(), this.user.label);
             p.onEdit = this.makeOnEditCallback(p, post.post);
             p.onDelete = this.makeOnDeleteCallback(post.post.id);
+            p.onEnterComment = this.makeOnEnterCommentCallback(p);
             wrapper.appendChild(p.dom);
         });
     }
@@ -168,6 +169,13 @@ class Main {
             yield service.deleteIntraclinicPost(postId);
             yield this.nav.update();
             this.nav.triggerPageChange();
+        });
+    }
+    makeOnEnterCommentCallback(post) {
+        return (comment) => __awaiter(this, void 0, void 0, function* () {
+            yield service.enterIntraclinicComment(comment.name, comment.content, comment.postId, comment.createdAt);
+            let comments = yield service.listIntraclinicComments(comment.postId);
+            post.updateCommentsArea(comments);
         });
     }
 }
