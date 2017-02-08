@@ -178,7 +178,42 @@
 	        let wrapper = this.postsWrapper;
 	        posts.forEach(post => {
 	            let p = new post_1.Post(post.post, post.comments, this.user.isOwner(), this.user.label);
+	            p.onEdit = this.makeOnEditCallback(p, post.post);
+	            p.onDelete = this.makeOnDeleteCallback(post.post.id);
 	            wrapper.appendChild(p.dom);
+	        });
+	    }
+	    makeOnEditCallback(post, postModel) {
+	        return () => __awaiter(this, void 0, void 0, function* () {
+	            let form = new post_form_1.PostForm(postModel);
+	            form.onEnter = () => __awaiter(this, void 0, void 0, function* () {
+	                yield service.updateIntraclinicPost(postModel.id, postModel.content);
+	                this.nav.triggerPageChange();
+	            });
+	            form.onCancel = () => {
+	                typed_dom_1.removeElement(form.dom);
+	                post.dom.style.display = "";
+	            };
+	            post.dom.style.display = "none";
+	            let parent = post.dom.parentNode;
+	            if (parent !== null) {
+	                parent.insertBefore(form.dom, post.dom);
+	            }
+	        });
+	    }
+	    makeOnDeleteCallback(postId) {
+	        return () => __awaiter(this, void 0, void 0, function* () {
+	            let comments = yield service.listIntraclinicComments(postId);
+	            if (comments.length > 0) {
+	                alert("コメントのある投稿は削除できません。");
+	                return;
+	            }
+	            if (!confirm("この投稿を削除していいですか？")) {
+	                return;
+	            }
+	            yield service.deleteIntraclinicPost(postId);
+	            yield this.nav.update();
+	            this.nav.triggerPageChange();
 	        });
 	    }
 	}
