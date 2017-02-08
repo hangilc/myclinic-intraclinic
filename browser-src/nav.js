@@ -55,6 +55,18 @@ class DefaultNav extends NavMode {
     updateDom(dom) {
         let prev = typed_dom_1.h.a({}, ["<"]);
         let next = typed_dom_1.h.a({}, [">"]);
+        prev.addEventListener("click", event => {
+            if (this.currentPage > 0) {
+                this.currentPage -= 1;
+                this.triggerPageChange();
+            }
+        });
+        next.addEventListener("click", event => {
+            if (this.currentPage < (this.totalPages - 1)) {
+                this.currentPage += 1;
+                this.triggerPageChange();
+            }
+        });
         dom.innerHTML = "";
         if (this.totalPages > 1) {
             typed_dom_1.appendToElement(dom, [

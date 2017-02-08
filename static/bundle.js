@@ -56,8 +56,11 @@
 	const typed_dom_1 = __webpack_require__(1);
 	const $ = __webpack_require__(2);
 	const nav_1 = __webpack_require__(7);
+	const intraclinic_post_1 = __webpack_require__(5);
 	const service = __webpack_require__(3);
 	const post_1 = __webpack_require__(8);
+	const post_form_1 = __webpack_require__(121);
+	const moment = __webpack_require__(10);
 	class User {
 	    constructor(name, role, label) {
 	        this.name = name;
@@ -125,22 +128,23 @@
 	        if (this.user.isOwner()) {
 	            let startEdit = typed_dom_1.h.a({}, ["新規投稿"]);
 	            let editorWrapper = typed_dom_1.h.div({}, []);
-	            // startEdit.addEventListener("click", event => {
-	            // 	if( editorWrapper.firstChild !== null ){
-	            // 		return;
-	            // 	}
-	            // 	let post = createNewIntraclinicPost();
-	            // 	let form = new PostForm(post);
-	            // 	form.onEnter = async () => {
-	            // 		let id = await service.enterIntraclinicPost(post.content, post.createdAt);
-	            // 		editorWrapper.innerHTML = "";
-	            // 		onEnter(id);
-	            // 	};
-	            // 	form.onCancel = () => {
-	            // 		editorWrapper.innerHTML = "";
-	            // 	}
-	            // 	editorWrapper.appendChild(form.dom);
-	            // })
+	            startEdit.addEventListener("click", event => {
+	                if (editorWrapper.firstChild !== null) {
+	                    return;
+	                }
+	                let post = this.createNewIntraclinicPost();
+	                let form = new post_form_1.PostForm(post);
+	                form.onEnter = () => __awaiter(this, void 0, void 0, function* () {
+	                    yield service.enterIntraclinicPost(post.content, post.createdAt);
+	                    editorWrapper.innerHTML = "";
+	                    yield this.nav.update();
+	                    this.nav.triggerPageChange();
+	                });
+	                form.onCancel = () => {
+	                    editorWrapper.innerHTML = "";
+	                };
+	                editorWrapper.appendChild(form.dom);
+	            });
 	            return typed_dom_1.h.div({}, [
 	                startEdit,
 	                editorWrapper
@@ -149,6 +153,13 @@
 	        else {
 	            return null;
 	        }
+	    }
+	    createNewIntraclinicPost() {
+	        let post = new intraclinic_post_1.IntraclinicPost();
+	        post.createdAt = moment().format("YYYY-MM-DD");
+	        post.content = "";
+	        post.id = 0;
+	        return post;
 	    }
 	    onPageChange(posts) {
 	        this.postsWrapper.innerHTML = "";
@@ -10724,6 +10735,18 @@
 	    updateDom(dom) {
 	        let prev = typed_dom_1.h.a({}, ["<"]);
 	        let next = typed_dom_1.h.a({}, [">"]);
+	        prev.addEventListener("click", event => {
+	            if (this.currentPage > 0) {
+	                this.currentPage -= 1;
+	                this.triggerPageChange();
+	            }
+	        });
+	        next.addEventListener("click", event => {
+	            if (this.currentPage < (this.totalPages - 1)) {
+	                this.currentPage += 1;
+	                this.triggerPageChange();
+	            }
+	        });
 	        dom.innerHTML = "";
 	        if (this.totalPages > 1) {
 	            typed_dom_1.appendToElement(dom, [
@@ -26173,6 +26196,45 @@
 	return zhTw;
 
 	})));
+
+
+/***/ },
+/* 121 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	const typed_dom_1 = __webpack_require__(1);
+	const kanjidate = __webpack_require__(9);
+	class PostForm {
+	    constructor(post) {
+	        this.onEnter = () => { };
+	        this.onCancel = () => { };
+	        console.log("content", post.content);
+	        let content = typed_dom_1.h.textarea({
+	            "rows": "16",
+	            "cols": "40"
+	        }, [post.content]);
+	        let enter = typed_dom_1.h.button({}, ["入力"]);
+	        enter.addEventListener("click", event => {
+	            post.content = content.value;
+	            this.onEnter();
+	        });
+	        let cancel = typed_dom_1.h.button({}, ["キャンセル"]);
+	        cancel.addEventListener("click", event => {
+	            this.onCancel();
+	        });
+	        this.dom = typed_dom_1.h.form({}, [
+	            typed_dom_1.h.div({}, [kanjidate.format(kanjidate.f1, post.createdAt)]),
+	            content,
+	            typed_dom_1.h.div({}, [
+	                enter,
+	                " ",
+	                cancel
+	            ])
+	        ]);
+	    }
+	}
+	exports.PostForm = PostForm;
 
 
 /***/ }

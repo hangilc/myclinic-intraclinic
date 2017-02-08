@@ -10,8 +10,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 const typed_dom_1 = require("./typed-dom");
 const $ = require("jquery");
 const nav_1 = require("./nav");
+const intraclinic_post_1 = require("./model/intraclinic-post");
 const service = require("./service");
 const post_1 = require("./post");
+const post_form_1 = require("./post-form");
+const moment = require("moment");
 class User {
     constructor(name, role, label) {
         this.name = name;
@@ -79,22 +82,23 @@ class Main {
         if (this.user.isOwner()) {
             let startEdit = typed_dom_1.h.a({}, ["新規投稿"]);
             let editorWrapper = typed_dom_1.h.div({}, []);
-            // startEdit.addEventListener("click", event => {
-            // 	if( editorWrapper.firstChild !== null ){
-            // 		return;
-            // 	}
-            // 	let post = createNewIntraclinicPost();
-            // 	let form = new PostForm(post);
-            // 	form.onEnter = async () => {
-            // 		let id = await service.enterIntraclinicPost(post.content, post.createdAt);
-            // 		editorWrapper.innerHTML = "";
-            // 		onEnter(id);
-            // 	};
-            // 	form.onCancel = () => {
-            // 		editorWrapper.innerHTML = "";
-            // 	}
-            // 	editorWrapper.appendChild(form.dom);
-            // })
+            startEdit.addEventListener("click", event => {
+                if (editorWrapper.firstChild !== null) {
+                    return;
+                }
+                let post = this.createNewIntraclinicPost();
+                let form = new post_form_1.PostForm(post);
+                form.onEnter = () => __awaiter(this, void 0, void 0, function* () {
+                    yield service.enterIntraclinicPost(post.content, post.createdAt);
+                    editorWrapper.innerHTML = "";
+                    yield this.nav.update();
+                    this.nav.triggerPageChange();
+                });
+                form.onCancel = () => {
+                    editorWrapper.innerHTML = "";
+                };
+                editorWrapper.appendChild(form.dom);
+            });
             return typed_dom_1.h.div({}, [
                 startEdit,
                 editorWrapper
@@ -103,6 +107,13 @@ class Main {
         else {
             return null;
         }
+    }
+    createNewIntraclinicPost() {
+        let post = new intraclinic_post_1.IntraclinicPost();
+        post.createdAt = moment().format("YYYY-MM-DD");
+        post.content = "";
+        post.id = 0;
+        return post;
     }
     onPageChange(posts) {
         this.postsWrapper.innerHTML = "";

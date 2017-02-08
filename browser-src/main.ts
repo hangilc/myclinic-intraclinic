@@ -5,6 +5,8 @@ import { IntraclinicPost } from "./model/intraclinic-post";
 import { IntraclinicComment } from "./model/intraclinic-comment";
 import * as service from "./service";
 import { Post } from "./post";
+import { PostForm } from "./post-form";
+import * as moment from "moment";
 
 class User {
 	name: string;
@@ -85,22 +87,23 @@ class Main {
 		if( this.user.isOwner() ){
 			let startEdit = h.a({}, ["新規投稿"]);
 			let editorWrapper = h.div({}, []);
-			// startEdit.addEventListener("click", event => {
-			// 	if( editorWrapper.firstChild !== null ){
-			// 		return;
-			// 	}
-			// 	let post = createNewIntraclinicPost();
-			// 	let form = new PostForm(post);
-			// 	form.onEnter = async () => {
-			// 		let id = await service.enterIntraclinicPost(post.content, post.createdAt);
-			// 		editorWrapper.innerHTML = "";
-			// 		onEnter(id);
-			// 	};
-			// 	form.onCancel = () => {
-			// 		editorWrapper.innerHTML = "";
-			// 	}
-			// 	editorWrapper.appendChild(form.dom);
-			// })
+			startEdit.addEventListener("click", event => {
+				if( editorWrapper.firstChild !== null ){
+					return;
+				}
+				let post = this.createNewIntraclinicPost();
+				let form = new PostForm(post);
+				form.onEnter = async () => {
+					await service.enterIntraclinicPost(post.content, post.createdAt);
+					editorWrapper.innerHTML = "";
+					await this.nav.update();
+					this.nav.triggerPageChange();
+				};
+				form.onCancel = () => {
+					editorWrapper.innerHTML = "";
+				}
+				editorWrapper.appendChild(form.dom);
+			})
 			return h.div({}, [
 				startEdit,
 				editorWrapper
@@ -108,6 +111,14 @@ class Main {
 		} else {
 			return null;
 		}
+	}
+
+	private createNewIntraclinicPost(): IntraclinicPost {
+		let post = new IntraclinicPost();
+		post.createdAt = moment().format("YYYY-MM-DD");
+		post.content = "";
+		post.id = 0;
+		return post;
 	}
 
 	private onPageChange(posts: IntraclinicPost[]): void {
