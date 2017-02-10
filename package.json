@@ -1,6 +1,6 @@
 {
   "name": "myclinic-intraclinic",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "intranet service for myclinic",
   "main": "index.js",
   "scripts": {
