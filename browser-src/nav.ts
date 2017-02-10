@@ -100,7 +100,7 @@ class ByDateNav extends NavMode {
 			} else {
 				this.firstPageItems = rem;
 				this.totalPages = this.calcNumberOfPages(numTotalPosts - rem, this.itemsPerPage) + 1;
-				this.currentPage = (numNewers - rem) / this.itemsPerPage;
+				this.currentPage = (numNewers - rem) / this.itemsPerPage + 1;
 			}
 		}
 		this.setupWorkarea();
@@ -159,11 +159,21 @@ class ByDateNav extends NavMode {
 			return [];
 		} else {
 			let extra = this.firstPageItems % this.itemsPerPage;
-			let offset = this.currentPage * this.itemsPerPage + extra;
-			return service.listIntraclinicPosts(offset, this.itemsPerPage);
+			let offset: number;
+			let n = this.itemsPerPage;
+			if( extra === 0 ){
+				offset = this.itemsPerPage * this.currentPage;
+			} else {
+				if( this.currentPage > 0 ){
+					offset = (this.currentPage - 1) * this.itemsPerPage + extra;
+				} else {
+					offset = 0;
+					n = extra;
+				}
+			}
+			return service.listIntraclinicPosts(offset, n);
 		}
 	}
-
 }
 
 export class Nav {
