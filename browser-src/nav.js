@@ -4,7 +4,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
         function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
+        step((generator = generator.apply(thisArg, _arguments)).next());
     });
 };
 const typed_dom_1 = require("./typed-dom");
@@ -108,7 +108,13 @@ class ByDateNav extends NavMode {
                 else {
                     this.firstPageItems = rem;
                     this.totalPages = this.calcNumberOfPages(numTotalPosts - rem, this.itemsPerPage) + 1;
-                    this.currentPage = (numNewers - rem) / this.itemsPerPage;
+                    this.currentPage = (numNewers - rem) / this.itemsPerPage + 1;
+                }
+                if (this.currentPage >= this.totalPages) {
+                    this.currentPage = this.totalPages - 1;
+                }
+                if (this.currentPage < 0) {
+                    this.currentPage = 0;
                 }
             }
             this.setupWorkarea();
@@ -167,8 +173,21 @@ class ByDateNav extends NavMode {
             }
             else {
                 let extra = this.firstPageItems % this.itemsPerPage;
-                let offset = this.currentPage * this.itemsPerPage + extra;
-                return service.listIntraclinicPosts(offset, this.itemsPerPage);
+                let offset;
+                let n = this.itemsPerPage;
+                if (extra === 0) {
+                    offset = this.itemsPerPage * this.currentPage;
+                }
+                else {
+                    if (this.currentPage > 0) {
+                        offset = (this.currentPage - 1) * this.itemsPerPage + extra;
+                    }
+                    else {
+                        offset = 0;
+                        n = extra;
+                    }
+                }
+                return service.listIntraclinicPosts(offset, n);
             }
         });
     }

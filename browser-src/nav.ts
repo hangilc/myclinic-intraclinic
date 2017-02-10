@@ -102,6 +102,12 @@ class ByDateNav extends NavMode {
 				this.totalPages = this.calcNumberOfPages(numTotalPosts - rem, this.itemsPerPage) + 1;
 				this.currentPage = (numNewers - rem) / this.itemsPerPage + 1;
 			}
+			if( this.currentPage >= this.totalPages ){
+				this.currentPage = this.totalPages - 1;
+			}
+			if( this.currentPage < 0 ){
+				this.currentPage = 0;
+			}
 		}
 		this.setupWorkarea();
 		this.navDoms.forEach(dom => { this.updateDom(dom); });

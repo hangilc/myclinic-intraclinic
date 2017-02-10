@@ -4,9 +4,8 @@
   "description": "intranet service for myclinic",
   "main": "index.js",
   "scripts": {
-    "compile": "tsc -p browser-src --watch",
-    "bundle": "webpack browser-src/main.js static/bundle.js --watch",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile": "tsc -p browser-src",
+    "bundle": "webpack browser-src/main.js static/bundle.js"
   },
   "repository": {
     "type": "git",
