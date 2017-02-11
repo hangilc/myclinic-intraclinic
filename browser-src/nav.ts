@@ -82,9 +82,66 @@ class ChronoPageSet extends PageSetBase implements PageSet {
 	}
 }
 
+class ByMonthPageSet extends PageSetBase implements PageSet {
+	private itemsPerPage: number = 10;
+	private pivotDate: string = "";
+	private firstPageItems: number;
+
+	setMonth(year: number, month: number): void {
+		let m = moment({year: year, month: month - 1, day: 1});
+		if( !m.isValid() ){
+			alert("月の設定が不適切です。");
+			return;
+		}
+		m = m.add(1, "months");
+		this.pivotDate = m.format("YYYY-MM-DD");
+	}
+
+	async recalc(): Promise<void> {
+		if( this.pivotDate === "" ){
+			return;
+		}
+		let numTotalPosts = await service.countIntraclinicPosts();
+		let numOlders = await service.countIntraclinicOlderThan(this.pivotDate);
+		let numNewers = numTotalPosts - numOlders;
+		let rem = numNewers % this.itemsPerPage;
+		if( rem === 0 ){
+			this.firstPageItems = this.itemsPerPage;
+			this.setTotalPages(this.calcNumberOfPages(numTotalPosts, this.itemsPerPage));
+			this.setCurrentPage(numNewers / this.itemsPerPage);
+		} else {
+			this.firstPageItems = rem;
+			this.setTotalPages(this.calcNumberOfPages(numTotalPosts - rem, this.itemsPerPage) + 1);
+			this.setCurrentPage((numNewers - rem) / this.itemsPerPage + 1);
+		}
+	}
+
+	async fetchPage(): Promise<IntraclinicPost[]> {
+		if( this.getTotalPages() <= 0 ){
+			return [];
+		} else {
+			let extra = this.firstPageItems % this.itemsPerPage;
+			let offset: number;
+			let n = this.itemsPerPage;
+			if( extra === 0 ){
+				offset = this.itemsPerPage * this.getCurrentPage();
+			} else {
+				if( this.getCurrentPage() > 0 ){
+					offset = (this.getCurrentPage() - 1) * this.itemsPerPage + extra;
+				} else {
+					offset = 0;
+					n = extra;
+				}
+			}
+			return service.listIntraclinicPosts(offset, n);
+		}
+	}
+
+}
+
 interface NavWidget {
 	getPageSet(): PageSet;
-	setupWorkarea(workarea: HTMLElement, onPageChange: (posts: IntraclinicPost[]) => void): Promise<void>;
+	setupWorkarea(workarea: HTMLElement): void;
 }
 
 class ChronoNavWidget implements NavWidget {
@@ -94,8 +151,65 @@ class ChronoNavWidget implements NavWidget {
 		return this.pageSet;
 	}
 
-	async setupWorkarea(workarea: HTMLElement, onPageChange: (posts: IntraclinicPost[]) => void): Promise<void> {
+	setupWorkarea(workarea: HTMLElement): void {
 
+	}
+}
+
+class MonthSelector {
+	dom: HTMLElement;
+	private pageSet: ByMonthPageSet;
+	private onPageSet: (posts: IntraclinicPost[]) => void;
+	private updateNavDoms: (pageSet: PageSet) => void;
+
+	constructor(pageSet: ByMonthPageSet, onPageSet: (posts: IntraclinicPost[]) => void,
+		updateNavDoms: (pageSet: PageSet) => void){
+		this.dom = this.createDom();
+		this.pageSet = pageSet;
+		this.onPageSet = onPageSet;
+		this.updateNavDoms = updateNavDoms;
+	}
+
+	private createDom(): HTMLElement {
+		let nenInput = h.input({type: "text", size: 2}, []);
+		let monthInput = h.input({type: "text", size: 2}, []);
+		let form = h.form({}, [
+			"平成", nenInput, "年", " ",
+			monthInput, "月", " ",
+			h.button({type: "submit"}, ["入力"])
+		]);
+		form.addEventListener("submit", async event => {
+			let nen = +nenInput.value;
+			let month = +monthInput.value;
+			if( nen > 0 && month > 0 ){
+				let year = kanjidate.fromGengou("平成", nen);
+				this.pageSet.setMonth(year, month);
+				await this.pageSet.recalc();
+				this.updateNavDoms(this.pageSet);
+				let posts = await this.pageSet.fetchPage();
+				this.onPageSet(posts);
+			}
+		});
+		return h.div({}, [form]);
+	}
+}
+
+class ByMonthNavWidget implements NavWidget {
+	private pageSet: ByMonthPageSet = new ByMonthPageSet();
+	private workareaContent: MonthSelector;
+	private onPageChange: (posts: IntraclinicPost[]) => void;
+
+	constructor(onPageChange: (posts: IntraclinicPost[]) => void,
+		updateNavDoms: (pageSet: PageSet) => void) {
+		this.workareaContent = new MonthSelector(this.pageSet, onPageChange, updateNavDoms);
+	}
+
+	getPageSet(): PageSet {
+		return this.pageSet;
+	}
+
+	setupWorkarea(workarea: HTMLElement): void {
+		workarea.appendChild(this.workareaContent.dom);
 	}
 }
 
@@ -103,6 +217,14 @@ type NavKind = "default" | "by-month";
 
 class NavFactory {
 	private cache: {[kind: string]: NavWidget} = {};
+	private onPageChange: (posts: IntraclinicPost[]) => void;
+	private updateNavDoms: (pageSet: PageSet) => void;
+
+	constructor(onPageChange: (posts: IntraclinicPost[]) => void,
+		updateNavDoms: (pageSet: PageSet) => void) {
+		this.onPageChange = onPageChange;
+		this.updateNavDoms = updateNavDoms;
+	}
 
 	get(kind: NavKind): NavWidget {
 		if( !(kind in this.cache) ){
@@ -114,7 +236,7 @@ class NavFactory {
 	private create(kind: NavKind): NavWidget {
 		switch(kind){
 			case "default": return new ChronoNavWidget();
-			case "by-month": return new ChronoNavWidget();
+			case "by-month": return new ByMonthNavWidget(this.onPageChange, this.updateNavDoms);
 		}
 	}
 }
@@ -158,7 +280,6 @@ class NavDom {
 
 export class NavManager {
 	onPageChange: (posts: IntraclinicPost[]) => void;
-	menuArea: HTMLElement;
 	workarea: HTMLElement;
 	current: NavWidget | null;
 	navFactory: NavFactory;
@@ -167,9 +288,9 @@ export class NavManager {
 
 	constructor(onPageChange: (posts: IntraclinicPost[]) => void, menuArea: HTMLElement, workarea: HTMLElement) {
 		this.onPageChange = onPageChange;
-		this.menuArea = menuArea;
+		this.setupMenu(menuArea);
 		this.workarea = workarea;
-		this.navFactory = new NavFactory();
+		this.navFactory = new NavFactory(onPageChange, (pageSet: PageSet) => { this.updateNavDoms(pageSet); });
 		this.navDomCallbacks = {
 			onPrev: () => { this.onPrev(); },
 			onNext: () => { this.onNext(); }
@@ -183,7 +304,7 @@ export class NavManager {
 	}
 
 	async init(): Promise<void> {
-		return this.switchTo(this.navFactory.get("default"));
+		return this.switchTo("default");
 	}
 
 	async recalc(): Promise<void> {
@@ -202,16 +323,22 @@ export class NavManager {
 		this.onPageChange(posts);
 	}
 
-	private async switchTo(navWidget: NavWidget): Promise<void> {
+	private async switchTo(kind: NavKind): Promise<void> {
+		let navWidget = this.navFactory.get(kind);
 		this.current = navWidget;
 		await navWidget.getPageSet().recalc();
-		if( navWidget.getPageSet().getTotalPages() > 1 ){
+		this.updateNavDoms(navWidget.getPageSet());
+		this.workarea.innerHTML = "";
+		await navWidget.setupWorkarea(this.workarea);
+		this.triggerPageChange();
+	}
+
+	private updateNavDoms(pageSet: PageSet): void {
+		if( pageSet.getTotalPages() > 1 ){
 			this.navDomList.forEach(navDom => { navDom.show(); });
 		} else {
 			this.navDomList.forEach(navDom => { navDom.hide(); });
 		}
-		this.workarea.innerHTML = "";
-		navWidget.setupWorkarea(this.workarea, this.onPageChange);
 	}
 
 	private onPrev() {
@@ -232,6 +359,23 @@ export class NavManager {
 				this.triggerPageChange();
 			}
 		}
+	}
+
+	private setupMenu(wrapper: HTMLElement): void {
+		let mostRecent = h.input({type: "radio", name: "choice", checked: true}, []);
+		let byMonth = h.input({type: "radio", name: "choice"}, []);
+		mostRecent.addEventListener("click", event => {
+			this.switchTo("default");
+		})
+		byMonth.addEventListener("click", event => {
+			this.switchTo("by-month");
+		})
+		appendToElement(wrapper, [
+			h.form({}, [
+				mostRecent, "日付順", " ",
+				byMonth, "月指定", " ",
+			])
+		])
 	}
 }
 

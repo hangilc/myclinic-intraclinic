@@ -78,6 +78,68 @@ class ChronoPageSet extends PageSetBase {
         });
     }
 }
+class ByMonthPageSet extends PageSetBase {
+    constructor() {
+        super(...arguments);
+        this.itemsPerPage = 10;
+        this.pivotDate = "";
+    }
+    setMonth(year, month) {
+        let m = moment({ year: year, month: month - 1, day: 1 });
+        if (!m.isValid()) {
+            alert("月の設定が不適切です。");
+            return;
+        }
+        m = m.add(1, "months");
+        this.pivotDate = m.format("YYYY-MM-DD");
+    }
+    recalc() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.pivotDate === "") {
+                return;
+            }
+            let numTotalPosts = yield service.countIntraclinicPosts();
+            let numOlders = yield service.countIntraclinicOlderThan(this.pivotDate);
+            let numNewers = numTotalPosts - numOlders;
+            let rem = numNewers % this.itemsPerPage;
+            if (rem === 0) {
+                this.firstPageItems = this.itemsPerPage;
+                this.setTotalPages(this.calcNumberOfPages(numTotalPosts, this.itemsPerPage));
+                this.setCurrentPage(numNewers / this.itemsPerPage);
+            }
+            else {
+                this.firstPageItems = rem;
+                this.setTotalPages(this.calcNumberOfPages(numTotalPosts - rem, this.itemsPerPage) + 1);
+                this.setCurrentPage((numNewers - rem) / this.itemsPerPage + 1);
+            }
+        });
+    }
+    fetchPage() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.getTotalPages() <= 0) {
+                return [];
+            }
+            else {
+                let extra = this.firstPageItems % this.itemsPerPage;
+                let offset;
+                let n = this.itemsPerPage;
+                if (extra === 0) {
+                    offset = this.itemsPerPage * this.getCurrentPage();
+                }
+                else {
+                    if (this.getCurrentPage() > 0) {
+                        offset = (this.getCurrentPage() - 1) * this.itemsPerPage + extra;
+                    }
+                    else {
+                        offset = 0;
+                        n = extra;
+                    }
+                }
+                return service.listIntraclinicPosts(offset, n);
+            }
+        });
+    }
+}
 class ChronoNavWidget {
     constructor() {
         this.pageSet = new ChronoPageSet();
@@ -85,14 +147,56 @@ class ChronoNavWidget {
     getPageSet() {
         return this.pageSet;
     }
-    setupWorkarea(workarea, onPageChange) {
-        return __awaiter(this, void 0, void 0, function* () {
-        });
+    setupWorkarea(workarea) {
+    }
+}
+class MonthSelector {
+    constructor(pageSet, onPageSet, updateNavDoms) {
+        this.dom = this.createDom();
+        this.pageSet = pageSet;
+        this.onPageSet = onPageSet;
+        this.updateNavDoms = updateNavDoms;
+    }
+    createDom() {
+        let nenInput = typed_dom_1.h.input({ type: "text", size: 2 }, []);
+        let monthInput = typed_dom_1.h.input({ type: "text", size: 2 }, []);
+        let form = typed_dom_1.h.form({}, [
+            "平成", nenInput, "年", " ",
+            monthInput, "月", " ",
+            typed_dom_1.h.button({ type: "submit" }, ["入力"])
+        ]);
+        form.addEventListener("submit", (event) => __awaiter(this, void 0, void 0, function* () {
+            let nen = +nenInput.value;
+            let month = +monthInput.value;
+            if (nen > 0 && month > 0) {
+                let year = kanjidate.fromGengou("平成", nen);
+                this.pageSet.setMonth(year, month);
+                yield this.pageSet.recalc();
+                this.updateNavDoms(this.pageSet);
+                let posts = yield this.pageSet.fetchPage();
+                this.onPageSet(posts);
+            }
+        }));
+        return typed_dom_1.h.div({}, [form]);
+    }
+}
+class ByMonthNavWidget {
+    constructor(onPageChange, updateNavDoms) {
+        this.pageSet = new ByMonthPageSet();
+        this.workareaContent = new MonthSelector(this.pageSet, onPageChange, updateNavDoms);
+    }
+    getPageSet() {
+        return this.pageSet;
+    }
+    setupWorkarea(workarea) {
+        workarea.appendChild(this.workareaContent.dom);
     }
 }
 class NavFactory {
-    constructor() {
+    constructor(onPageChange, updateNavDoms) {
         this.cache = {};
+        this.onPageChange = onPageChange;
+        this.updateNavDoms = updateNavDoms;
     }
     get(kind) {
         if (!(kind in this.cache)) {
@@ -103,7 +207,7 @@ class NavFactory {
     create(kind) {
         switch (kind) {
             case "default": return new ChronoNavWidget();
-            case "by-month": return new ChronoNavWidget();
+            case "by-month": return new ByMonthNavWidget(this.onPageChange, this.updateNavDoms);
         }
     }
 }
@@ -136,9 +240,9 @@ class NavManager {
     constructor(onPageChange, menuArea, workarea) {
         this.navDomList = [];
         this.onPageChange = onPageChange;
-        this.menuArea = menuArea;
+        this.setupMenu(menuArea);
         this.workarea = workarea;
-        this.navFactory = new NavFactory();
+        this.navFactory = new NavFactory(onPageChange, (pageSet) => { this.updateNavDoms(pageSet); });
         this.navDomCallbacks = {
             onPrev: () => { this.onPrev(); },
             onNext: () => { this.onNext(); }
@@ -151,7 +255,7 @@ class NavManager {
     }
     init() {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.switchTo(this.navFactory.get("default"));
+            return this.switchTo("default");
         });
     }
     recalc() {
@@ -172,19 +276,24 @@ class NavManager {
             this.onPageChange(posts);
         });
     }
-    switchTo(navWidget) {
+    switchTo(kind) {
         return __awaiter(this, void 0, void 0, function* () {
+            let navWidget = this.navFactory.get(kind);
             this.current = navWidget;
             yield navWidget.getPageSet().recalc();
-            if (navWidget.getPageSet().getTotalPages() > 1) {
-                this.navDomList.forEach(navDom => { navDom.show(); });
-            }
-            else {
-                this.navDomList.forEach(navDom => { navDom.hide(); });
-            }
+            this.updateNavDoms(navWidget.getPageSet());
             this.workarea.innerHTML = "";
-            navWidget.setupWorkarea(this.workarea, this.onPageChange);
+            yield navWidget.setupWorkarea(this.workarea);
+            this.triggerPageChange();
         });
+    }
+    updateNavDoms(pageSet) {
+        if (pageSet.getTotalPages() > 1) {
+            this.navDomList.forEach(navDom => { navDom.show(); });
+        }
+        else {
+            this.navDomList.forEach(navDom => { navDom.hide(); });
+        }
     }
     onPrev() {
         let current = this.current;
@@ -203,6 +312,22 @@ class NavManager {
                 this.triggerPageChange();
             }
         }
+    }
+    setupMenu(wrapper) {
+        let mostRecent = typed_dom_1.h.input({ type: "radio", name: "choice", checked: true }, []);
+        let byMonth = typed_dom_1.h.input({ type: "radio", name: "choice" }, []);
+        mostRecent.addEventListener("click", event => {
+            this.switchTo("default");
+        });
+        byMonth.addEventListener("click", event => {
+            this.switchTo("by-month");
+        });
+        typed_dom_1.appendToElement(wrapper, [
+            typed_dom_1.h.form({}, [
+                mostRecent, "日付順", " ",
+                byMonth, "月指定", " ",
+            ])
+        ]);
     }
 }
 exports.NavManager = NavManager;

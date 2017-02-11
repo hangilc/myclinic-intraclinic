@@ -74,7 +74,7 @@ class Main {
 
 	async setup(): Promise<void> {
 		await this.nav.init();
-		this.nav.triggerPageChange();
+		//this.nav.triggerPageChange();
 	}
 
 	private userDisp(): HTMLElement {

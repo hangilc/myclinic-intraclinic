@@ -70,7 +70,7 @@ class Main {
     setup() {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.nav.init();
-            this.nav.triggerPageChange();
+            //this.nav.triggerPageChange();
         });
     }
     userDisp() {
