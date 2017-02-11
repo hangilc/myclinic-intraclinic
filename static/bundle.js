@@ -50,7 +50,7 @@
 	        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
 	        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
 	        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-	        step((generator = generator.apply(thisArg, _arguments)).next());
+	        step((generator = generator.apply(thisArg, _arguments || [])).next());
 	    });
 	};
 	const typed_dom_1 = __webpack_require__(1);
@@ -98,14 +98,16 @@
 	            this.dom = typed_dom_1.h.div({}, ["Login required."]);
 	            return;
 	        }
-	        this.nav = new nav_1.Nav(posts => { this.onPageChange(posts); });
+	        let navMenu = typed_dom_1.h.div({}, []);
+	        let navWork = typed_dom_1.h.div({}, []);
 	        this.postsWrapper = typed_dom_1.h.div({}, []);
+	        this.nav = new nav_1.NavManager(posts => { this.onPageChange(posts); }, navMenu, navWork);
 	        this.dom = typed_dom_1.h.div({}, [
 	            typed_dom_1.h.h1({}, ["院内ミーティング"]),
 	            this.userDisp(),
 	            this.editPart(),
-	            this.nav.navChoiceDom,
-	            this.nav.navWorkarea,
+	            navMenu,
+	            navWork,
 	            this.nav.createDom(),
 	            this.postsWrapper,
 	            this.nav.createDom()
@@ -113,7 +115,7 @@
 	    }
 	    setup() {
 	        return __awaiter(this, void 0, void 0, function* () {
-	            yield this.nav.update();
+	            yield this.nav.init();
 	            this.nav.triggerPageChange();
 	        });
 	    }
@@ -138,7 +140,7 @@
 	                form.onEnter = () => __awaiter(this, void 0, void 0, function* () {
 	                    yield service.enterIntraclinicPost(post.content, post.createdAt);
 	                    editorWrapper.innerHTML = "";
-	                    yield this.nav.update();
+	                    yield this.nav.recalc();
 	                    this.nav.triggerPageChange();
 	                });
 	                form.onCancel = () => {
@@ -214,7 +216,7 @@
 	                return;
 	            }
 	            yield service.deleteIntraclinicPost(postId);
-	            yield this.nav.update();
+	            yield this.nav.recalc();
 	            this.nav.triggerPageChange();
 	        });
 	    }
@@ -10558,13 +10560,192 @@
 	        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
 	        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
 	        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-	        step((generator = generator.apply(thisArg, _arguments)).next());
+	        step((generator = generator.apply(thisArg, _arguments || [])).next());
 	    });
 	};
 	const typed_dom_1 = __webpack_require__(1);
 	const service = __webpack_require__(4);
 	const kanjidate = __webpack_require__(8);
 	const moment = __webpack_require__(9);
+	class ChronoPageSet {
+	    constructor() {
+	        this.totalPages = 0;
+	        this.currentPage = 0;
+	        this.itemsPerPage = 10;
+	    }
+	    recalc() {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            let nPosts = yield service.countIntraclinicPosts();
+	            this.totalPages = this.calcNumberOfPages(nPosts, this.itemsPerPage);
+	            if (this.totalPages <= 0) {
+	                this.currentPage = 0;
+	            }
+	            else if (this.currentPage >= this.totalPages) {
+	                this.currentPage = this.totalPages - 1;
+	            }
+	        });
+	    }
+	    fetchPage() {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            if (this.totalPages <= 0) {
+	                return [];
+	            }
+	            let offset = this.currentPage * this.itemsPerPage;
+	            return service.listIntraclinicPosts(offset, this.itemsPerPage);
+	        });
+	    }
+	    getTotalPages() {
+	        return this.totalPages;
+	    }
+	    gotoNextPage() {
+	        if (this.currentPage < (this.totalPages - 1)) {
+	            this.currentPage += 1;
+	            return true;
+	        }
+	        else {
+	            return false;
+	        }
+	    }
+	    gotoPrevPage() {
+	        if (this.currentPage > 0) {
+	            this.currentPage -= 1;
+	            return true;
+	        }
+	        else {
+	            return false;
+	        }
+	    }
+	    calcNumberOfPages(totalItems, itemsPerPage) {
+	        return Math.floor((totalItems + itemsPerPage - 1) / itemsPerPage);
+	    }
+	}
+	class ChronoNavWidget {
+	    constructor() {
+	        this.pageSet = new ChronoPageSet();
+	    }
+	    getPageSet() {
+	        return this.pageSet;
+	    }
+	    setupWorkarea(workarea, onPageChange) {
+	        return __awaiter(this, void 0, void 0, function* () {
+	        });
+	    }
+	}
+	class NavFactory {
+	    constructor() {
+	        this.cache = {};
+	    }
+	    get(kind) {
+	        if (!(kind in this.cache)) {
+	            this.cache[kind] = this.create(kind);
+	        }
+	        return this.cache[kind];
+	    }
+	    create(kind) {
+	        switch (kind) {
+	            case "default": return new ChronoNavWidget();
+	            case "by-month": return new ChronoNavWidget();
+	        }
+	    }
+	}
+	class NavDom {
+	    constructor(callbacks) {
+	        this.dom = this.createDom();
+	        this.callbacks = callbacks;
+	    }
+	    show() {
+	        this.dom.style.display = "";
+	    }
+	    hide() {
+	        this.dom.style.display = "none";
+	    }
+	    createDom() {
+	        let prev = typed_dom_1.h.a({}, ["<"]);
+	        let next = typed_dom_1.h.a({}, [">"]);
+	        prev.addEventListener("click", event => {
+	            this.callbacks.onPrev();
+	        });
+	        next.addEventListener("click", event => {
+	            this.callbacks.onNext();
+	        });
+	        return typed_dom_1.h.div({}, [
+	            prev, " ", next
+	        ]);
+	    }
+	}
+	class NavManager {
+	    constructor(onPageChange, menuArea, workarea) {
+	        this.navDomList = [];
+	        this.onPageChange = onPageChange;
+	        this.menuArea = menuArea;
+	        this.workarea = workarea;
+	        this.navFactory = new NavFactory();
+	        this.navDomCallbacks = {
+	            onPrev: () => { this.onPrev(); },
+	            onNext: () => { this.onNext(); }
+	        };
+	    }
+	    createDom() {
+	        let navDom = new NavDom(this.navDomCallbacks);
+	        this.navDomList.push(navDom);
+	        return navDom.dom;
+	    }
+	    init() {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            return this.switchTo(this.navFactory.get("default"));
+	        });
+	    }
+	    recalc() {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            let current = this.current;
+	            if (current !== null) {
+	                return current.getPageSet().recalc();
+	            }
+	        });
+	    }
+	    triggerPageChange() {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            let current = this.current;
+	            if (current === null) {
+	                return;
+	            }
+	            let posts = yield current.getPageSet().fetchPage();
+	            this.onPageChange(posts);
+	        });
+	    }
+	    switchTo(navWidget) {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            this.current = navWidget;
+	            yield navWidget.getPageSet().recalc();
+	            if (navWidget.getPageSet().getTotalPages() > 1) {
+	                this.navDomList.forEach(navDom => { navDom.show(); });
+	            }
+	            else {
+	                this.navDomList.forEach(navDom => { navDom.hide(); });
+	            }
+	            navWidget.setupWorkarea(this.workarea, this.onPageChange);
+	        });
+	    }
+	    onPrev() {
+	        let current = this.current;
+	        if (current !== null) {
+	            let ok = current.getPageSet().gotoPrevPage();
+	            if (ok) {
+	                this.triggerPageChange();
+	            }
+	        }
+	    }
+	    onNext() {
+	        let current = this.current;
+	        if (current !== null) {
+	            let ok = current.getPageSet().gotoNextPage();
+	            if (ok) {
+	                this.triggerPageChange();
+	            }
+	        }
+	    }
+	}
+	exports.NavManager = NavManager;
 	class NavMode {
 	    constructor(onPageChange, workarea, navDoms) {
 	        this.onPageChange = (_) => { };
@@ -10812,7 +10993,7 @@
 	        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
 	        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
 	        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-	        step((generator = generator.apply(thisArg, _arguments)).next());
+	        step((generator = generator.apply(thisArg, _arguments || [])).next());
 	    });
 	};
 	const request_1 = __webpack_require__(5);
@@ -26273,7 +26454,7 @@
 	        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
 	        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
 	        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-	        step((generator = generator.apply(thisArg, _arguments)).next());
+	        step((generator = generator.apply(thisArg, _arguments || [])).next());
 	    });
 	};
 	const typed_dom_1 = __webpack_require__(1);

@@ -4,7 +4,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
         function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments)).next());
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
 const typed_dom_1 = require("./typed-dom");
@@ -52,14 +52,16 @@ class Main {
             this.dom = typed_dom_1.h.div({}, ["Login required."]);
             return;
         }
-        this.nav = new nav_1.Nav(posts => { this.onPageChange(posts); });
+        let navMenu = typed_dom_1.h.div({}, []);
+        let navWork = typed_dom_1.h.div({}, []);
         this.postsWrapper = typed_dom_1.h.div({}, []);
+        this.nav = new nav_1.NavManager(posts => { this.onPageChange(posts); }, navMenu, navWork);
         this.dom = typed_dom_1.h.div({}, [
             typed_dom_1.h.h1({}, ["院内ミーティング"]),
             this.userDisp(),
             this.editPart(),
-            this.nav.navChoiceDom,
-            this.nav.navWorkarea,
+            navMenu,
+            navWork,
             this.nav.createDom(),
             this.postsWrapper,
             this.nav.createDom()
@@ -67,7 +69,7 @@ class Main {
     }
     setup() {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.nav.update();
+            yield this.nav.init();
             this.nav.triggerPageChange();
         });
     }
@@ -92,7 +94,7 @@ class Main {
                 form.onEnter = () => __awaiter(this, void 0, void 0, function* () {
                     yield service.enterIntraclinicPost(post.content, post.createdAt);
                     editorWrapper.innerHTML = "";
-                    yield this.nav.update();
+                    yield this.nav.recalc();
                     this.nav.triggerPageChange();
                 });
                 form.onCancel = () => {
@@ -168,7 +170,7 @@ class Main {
                 return;
             }
             yield service.deleteIntraclinicPost(postId);
-            yield this.nav.update();
+            yield this.nav.recalc();
             this.nav.triggerPageChange();
         });
     }

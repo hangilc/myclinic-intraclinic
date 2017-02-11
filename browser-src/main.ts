@@ -1,6 +1,6 @@
 import { h, appendToElement, removeElement } from "./typed-dom";
 import * as $ from "jquery";
-import { Nav } from "./nav";
+import { NavManager } from "./nav";
 import { IntraclinicPost } from "./model/intraclinic-post";
 import { IntraclinicComment } from "./model/intraclinic-comment";
 import * as service from "./service";
@@ -48,7 +48,7 @@ class Main {
 	dom: HTMLElement;
 	postsWrapper: HTMLElement;
 	user: User;
-	nav: Nav;
+	nav: NavManager;
 
 	constructor(user: User){
 		this.user = user;
@@ -56,14 +56,16 @@ class Main {
 			this.dom = h.div({}, ["Login required."]);
 			return;
 		}
-		this.nav = new Nav(posts => { this.onPageChange(posts); });
+		let navMenu = h.div({}, []);
+		let navWork = h.div({}, []);
 		this.postsWrapper = h.div({}, []);
+		this.nav = new NavManager(posts => { this.onPageChange(posts); }, navMenu, navWork);
 		this.dom = h.div({}, [
 			h.h1({}, ["院内ミーティング"]),
 			this.userDisp(),
 			this.editPart(),
-			this.nav.navChoiceDom,
-			this.nav.navWorkarea,
+			navMenu,
+			navWork,
 			this.nav.createDom(),
 			this.postsWrapper,
 			this.nav.createDom()
@@ -71,7 +73,7 @@ class Main {
 	}
 
 	async setup(): Promise<void> {
-		await this.nav.update();
+		await this.nav.init();
 		this.nav.triggerPageChange();
 	}
 
@@ -97,7 +99,7 @@ class Main {
 				form.onEnter = async () => {
 					await service.enterIntraclinicPost(post.content, post.createdAt);
 					editorWrapper.innerHTML = "";
-					await this.nav.update();
+					await this.nav.recalc();
 					this.nav.triggerPageChange();
 				};
 				form.onCancel = () => {
@@ -177,7 +179,7 @@ class Main {
 				return;
 			}
 			await service.deleteIntraclinicPost(postId);
-			await this.nav.update();
+			await this.nav.recalc();
 			this.nav.triggerPageChange();
 		}
 	}

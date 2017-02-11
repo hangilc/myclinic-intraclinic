@@ -4,6 +4,216 @@ import * as service from "./service";
 import * as kanjidate from "kanjidate";
 import * as moment from "moment";
 
+interface PageSet {
+	recalc(): Promise<void>;
+	fetchPage(): Promise<IntraclinicPost[]>;
+	getTotalPages(): number;
+	gotoNextPage(): boolean;
+	gotoPrevPage(): boolean;
+}
+
+class ChronoPageSet implements PageSet {
+	private totalPages: number = 0;
+	private currentPage: number = 0;
+	private itemsPerPage: number = 10;
+
+	async recalc(): Promise<void> {
+		let nPosts = await service.countIntraclinicPosts();
+		this.totalPages = this.calcNumberOfPages(nPosts, this.itemsPerPage);
+		if( this.totalPages <= 0 ){
+			this.currentPage = 0;
+		} else if( this.currentPage >= this.totalPages ) {
+			this.currentPage = this.totalPages - 1;
+		}
+	}
+
+	async fetchPage(): Promise<IntraclinicPost[]> {
+		if( this.totalPages <= 0 ){
+			return [];
+		}
+		let offset = this.currentPage * this.itemsPerPage;
+		return service.listIntraclinicPosts(offset, this.itemsPerPage);
+	}
+
+	getTotalPages(): number {
+		return this.totalPages;
+	}
+
+	gotoNextPage(): boolean {
+		if( this.currentPage < (this.totalPages - 1) ){
+			this.currentPage += 1;
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	gotoPrevPage(): boolean {
+		if( this.currentPage > 0 ){
+			this.currentPage -= 1;
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	protected calcNumberOfPages(totalItems: number, itemsPerPage: number): number {
+		return Math.floor((totalItems + itemsPerPage - 1) / itemsPerPage);
+	}
+}
+
+interface NavWidget {
+	getPageSet(): PageSet;
+	setupWorkarea(workarea: HTMLElement, onPageChange: (posts: IntraclinicPost[]) => void): Promise<void>;
+}
+
+class ChronoNavWidget implements NavWidget {
+	private pageSet: PageSet = new ChronoPageSet();
+
+	getPageSet(): PageSet {
+		return this.pageSet;
+	}
+
+	async setupWorkarea(workarea: HTMLElement, onPageChange: (posts: IntraclinicPost[]) => void): Promise<void> {
+
+	}
+}
+
+type NavKind = "default" | "by-month";
+
+class NavFactory {
+	private cache: {[kind: string]: NavWidget} = {};
+
+	get(kind: NavKind): NavWidget {
+		if( !(kind in this.cache) ){
+			this.cache[kind] = this.create(kind);
+		}
+		return this.cache[kind];
+	}
+
+	private create(kind: NavKind): NavWidget {
+		switch(kind){
+			case "default": return new ChronoNavWidget();
+			case "by-month": return new ChronoNavWidget();
+		}
+	}
+}
+
+interface NavDomCallbacks {
+	onPrev: () => void;
+	onNext: () => void;
+}
+
+class NavDom {
+	dom: HTMLElement;
+	callbacks: NavDomCallbacks;
+
+	constructor(callbacks: NavDomCallbacks) {
+		this.dom = this.createDom();
+		this.callbacks = callbacks;
+	}
+
+	show(): void {
+		this.dom.style.display = "";
+	}
+
+	hide(): void {
+		this.dom.style.display = "none";
+	}
+
+	private createDom(): HTMLElement {
+		let prev = h.a({}, ["<"]);
+		let next = h.a({}, [">"]);
+		prev.addEventListener("click", event => {
+			this.callbacks.onPrev();
+		});
+		next.addEventListener("click", event => {
+			this.callbacks.onNext();
+		})
+		return h.div({}, [
+			prev, " ", next
+		]);
+	}
+}
+
+export class NavManager {
+	onPageChange: (posts: IntraclinicPost[]) => void;
+	menuArea: HTMLElement;
+	workarea: HTMLElement;
+	current: NavWidget | null;
+	navFactory: NavFactory;
+	navDomList: NavDom[] = [];
+	navDomCallbacks: NavDomCallbacks;
+
+	constructor(onPageChange: (posts: IntraclinicPost[]) => void, menuArea: HTMLElement, workarea: HTMLElement) {
+		this.onPageChange = onPageChange;
+		this.menuArea = menuArea;
+		this.workarea = workarea;
+		this.navFactory = new NavFactory();
+		this.navDomCallbacks = {
+			onPrev: () => { this.onPrev(); },
+			onNext: () => { this.onNext(); }
+		}
+	}
+
+	createDom(): HTMLElement {
+		let navDom = new NavDom(this.navDomCallbacks);
+		this.navDomList.push(navDom);
+		return navDom.dom;
+	}
+
+	async init(): Promise<void> {
+		return this.switchTo(this.navFactory.get("default"));
+	}
+
+	async recalc(): Promise<void> {
+		let current = this.current;
+		if( current !== null ){
+			return current.getPageSet().recalc();
+		}
+	}
+
+	async triggerPageChange(): Promise<void> {
+		let current = this.current;
+		if( current === null ){
+			return;
+		}
+		let posts = await current.getPageSet().fetchPage();
+		this.onPageChange(posts);
+	}
+
+	private async switchTo(navWidget: NavWidget): Promise<void> {
+		this.current = navWidget;
+		await navWidget.getPageSet().recalc();
+		if( navWidget.getPageSet().getTotalPages() > 1 ){
+			this.navDomList.forEach(navDom => { navDom.show(); });
+		} else {
+			this.navDomList.forEach(navDom => { navDom.hide(); });
+		}
+		navWidget.setupWorkarea(this.workarea, this.onPageChange);
+	}
+
+	private onPrev() {
+		let current = this.current;
+		if( current !== null ){
+			let ok = current.getPageSet().gotoPrevPage();
+			if( ok ){
+				this.triggerPageChange();
+			}
+		}
+	}
+
+	private onNext() {
+		let current = this.current;
+		if( current !== null ){
+			let ok = current.getPageSet().gotoNextPage();
+			if( ok ){
+				this.triggerPageChange();
+			}
+		}
+	}
+}
+
 abstract class NavMode {
 	protected onPageChange: (posts: IntraclinicPost[]) => void = (_) => {};
 	protected workarea: HTMLElement;
