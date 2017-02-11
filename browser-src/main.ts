@@ -3,6 +3,7 @@ import * as $ from "jquery";
 import { NavManager } from "./nav";
 import { IntraclinicPost } from "./model/intraclinic-post";
 import { IntraclinicComment } from "./model/intraclinic-comment";
+import { IntraclinicTag } from "./model/intraclinic-tag";
 import * as service from "./service";
 import { Post } from "./post";
 import { PostForm } from "./post-form";
@@ -40,8 +41,15 @@ $.ajax({
 	}
 });
 
-class PostWithComments {
-	constructor(public post: IntraclinicPost, public comments: IntraclinicComment[]){}
+class PostEx {
+	post: IntraclinicPost;
+	comments: IntraclinicComment[];
+	tags: IntraclinicTag[];
+	constructor(post: IntraclinicPost, comments: IntraclinicComment[], tags: IntraclinicTag[]){
+		this.post = post;
+		this.comments = comments;
+		this.tags = tags;
+	}
 }
 
 class Main {
@@ -74,7 +82,6 @@ class Main {
 
 	async setup(): Promise<void> {
 		await this.nav.init();
-		//this.nav.triggerPageChange();
 	}
 
 	private userDisp(): HTMLElement {
@@ -128,9 +135,10 @@ class Main {
 		this.postsWrapper.innerHTML = "";
 		Promise.all(posts.map(async post => {
 			let comments = await service.listIntraclinicComments(post.id);
-			return new PostWithComments(post, comments);
+			let tags = await service.listIntraclinicTagForPost(post.id);
+			return new PostEx(post, comments, tags);
 		}))
-		.then((posts: PostWithComments[]) => {
+		.then((posts: PostEx[]) => {
 			this.renderPosts(posts);
 		})
 		.catch(err => {
@@ -138,10 +146,10 @@ class Main {
 		})
 	}
 
-	private renderPosts(posts: PostWithComments[]): void{
+	private renderPosts(posts: PostEx[]): void{
 		let wrapper = this.postsWrapper;
 		posts.forEach(post => {
-			let p = new Post(post.post, post.comments, this.user.isOwner(), this.user.label);
+			let p = new Post(post.post, post.comments, post.tags, this.user.isOwner(), this.user.label);
 			p.onEdit = this.makeOnEditCallback(p, post.post);
 			p.onDelete = this.makeOnDeleteCallback(post.post.id);
 			p.onEnterComment = this.makeOnEnterCommentCallback(p);

@@ -127,6 +127,12 @@ function listIntraclinicTag() {
     });
 }
 exports.listIntraclinicTag = listIntraclinicTag;
+function listIntraclinicTagForPost(postId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return request_1.request("/service?_q=list_intra_clinic_tag_for_post", { post_id: postId }, "GET", TagArrayConverter);
+    });
+}
+exports.listIntraclinicTagForPost = listIntraclinicTagForPost;
 function renameIntraclinicTag(id, name) {
     return __awaiter(this, void 0, void 0, function* () {
         return request_1.request("/service?_q=rename_intra_clinic_tag", { id: id, name: name }, "POST", toBoolean);

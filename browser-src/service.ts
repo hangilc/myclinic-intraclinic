@@ -95,6 +95,10 @@ export async function listIntraclinicTag(): Promise<IntraclinicTag[]> {
 	return request("/service?_q=list_intra_clinic_tag", {}, "GET", TagArrayConverter);
 }
 
+export async function listIntraclinicTagForPost(postId: number): Promise<IntraclinicTag[]> {
+	return request("/service?_q=list_intra_clinic_tag_for_post", { post_id: postId }, "GET", TagArrayConverter);
+}
+
 export async function renameIntraclinicTag(id: number, name: string): Promise<boolean> {
 	return request("/service?_q=rename_intra_clinic_tag", { id: id, name: name }, "POST", toBoolean);
 }

@@ -1,6 +1,7 @@
 import { h, appendToElement } from "./typed-dom";
 import { IntraclinicPost } from "./model/intraclinic-post";
 import { IntraclinicComment } from "./model/intraclinic-comment";
+import { IntraclinicTag } from "./model/intraclinic-tag";
 import * as kanjidate from "kanjidate";
 import * as moment from "moment";
 
@@ -28,7 +29,7 @@ export class Post {
 	private userName: string;
 
 	constructor(modelPost: IntraclinicPost, modelComments: IntraclinicComment[], 
-		isOwner: boolean, userName: string){
+		tags: IntraclinicTag[], isOwner: boolean, userName: string){
 		this.modelPost = modelPost;
 		this.modelComments = modelComments;
 		this.isOwner = isOwner;
@@ -38,6 +39,7 @@ export class Post {
 			this.datePart(),
 			this.editPart(),
 			this.contentPart(),
+			this.tagPart(tags),
 			this.commentsWrapper
 		]);
 	}
@@ -75,6 +77,32 @@ export class Post {
 	private contentPart(): HTMLElement {
 		return h.div({"class": "content"}, 
 			formatContent(this.modelPost.content));
+	}
+
+	private tagPart(tags: IntraclinicTag[]): HTMLElement | null {
+		if( tags.length === 0 ){
+			return null;
+		} else {
+			return h.div({
+				style: "border:1px solid #ccc; padding: 6px"
+			}, [
+				"タグ： ",
+				...interpose<HTMLElement|string>(" ", tags.map(tag => {
+					return tag.name;
+				}))
+			]);
+		}
+
+		function interpose<T>(e:T, arr: T[]): T[] {
+			let result: T[] = [];
+			arr.forEach((a:T, index:number) => {
+				result.push(a);
+				if( index !== (arr.length - 1) ){
+					result.push(e);
+				}
+			})
+			return result;
+		}
 	}
 
 	private commentPart(): HTMLElement {

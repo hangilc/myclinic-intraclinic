@@ -39,10 +39,11 @@ $.ajax({
         main.setup();
     }
 });
-class PostWithComments {
-    constructor(post, comments) {
+class PostEx {
+    constructor(post, comments, tags) {
         this.post = post;
         this.comments = comments;
+        this.tags = tags;
     }
 }
 class Main {
@@ -70,7 +71,6 @@ class Main {
     setup() {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.nav.init();
-            //this.nav.triggerPageChange();
         });
     }
     userDisp() {
@@ -122,7 +122,8 @@ class Main {
         this.postsWrapper.innerHTML = "";
         Promise.all(posts.map((post) => __awaiter(this, void 0, void 0, function* () {
             let comments = yield service.listIntraclinicComments(post.id);
-            return new PostWithComments(post, comments);
+            let tags = yield service.listIntraclinicTagForPost(post.id);
+            return new PostEx(post, comments, tags);
         })))
             .then((posts) => {
             this.renderPosts(posts);
@@ -134,7 +135,7 @@ class Main {
     renderPosts(posts) {
         let wrapper = this.postsWrapper;
         posts.forEach(post => {
-            let p = new post_1.Post(post.post, post.comments, this.user.isOwner(), this.user.label);
+            let p = new post_1.Post(post.post, post.comments, post.tags, this.user.isOwner(), this.user.label);
             p.onEdit = this.makeOnEditCallback(p, post.post);
             p.onDelete = this.makeOnDeleteCallback(post.post.id);
             p.onEnterComment = this.makeOnEnterCommentCallback(p);

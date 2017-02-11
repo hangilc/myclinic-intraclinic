@@ -23,7 +23,7 @@ function formatContent(content) {
     return out;
 }
 class Post {
-    constructor(modelPost, modelComments, isOwner, userName) {
+    constructor(modelPost, modelComments, tags, isOwner, userName) {
         this.onEdit = () => { };
         this.onDelete = () => { };
         this.onEnterComment = _ => { };
@@ -36,6 +36,7 @@ class Post {
             this.datePart(),
             this.editPart(),
             this.contentPart(),
+            this.tagPart(tags),
             this.commentsWrapper
         ]);
     }
@@ -71,6 +72,31 @@ class Post {
     }
     contentPart() {
         return typed_dom_1.h.div({ "class": "content" }, formatContent(this.modelPost.content));
+    }
+    tagPart(tags) {
+        if (tags.length === 0) {
+            return null;
+        }
+        else {
+            return typed_dom_1.h.div({
+                style: "border:1px solid #ccc; padding: 6px"
+            }, [
+                "タグ： ",
+                ...interpose(" ", tags.map(tag => {
+                    return tag.name;
+                }))
+            ]);
+        }
+        function interpose(e, arr) {
+            let result = [];
+            arr.forEach((a, index) => {
+                result.push(a);
+                if (index !== (arr.length - 1)) {
+                    result.push(e);
+                }
+            });
+            return result;
+        }
     }
     commentPart() {
         return typed_dom_1.h.table({

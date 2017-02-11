@@ -85,10 +85,11 @@
 	        main.setup();
 	    }
 	});
-	class PostWithComments {
-	    constructor(post, comments) {
+	class PostEx {
+	    constructor(post, comments, tags) {
 	        this.post = post;
 	        this.comments = comments;
+	        this.tags = tags;
 	    }
 	}
 	class Main {
@@ -116,7 +117,6 @@
 	    setup() {
 	        return __awaiter(this, void 0, void 0, function* () {
 	            yield this.nav.init();
-	            //this.nav.triggerPageChange();
 	        });
 	    }
 	    userDisp() {
@@ -168,7 +168,8 @@
 	        this.postsWrapper.innerHTML = "";
 	        Promise.all(posts.map((post) => __awaiter(this, void 0, void 0, function* () {
 	            let comments = yield service.listIntraclinicComments(post.id);
-	            return new PostWithComments(post, comments);
+	            let tags = yield service.listIntraclinicTagForPost(post.id);
+	            return new PostEx(post, comments, tags);
 	        })))
 	            .then((posts) => {
 	            this.renderPosts(posts);
@@ -180,7 +181,7 @@
 	    renderPosts(posts) {
 	        let wrapper = this.postsWrapper;
 	        posts.forEach(post => {
-	            let p = new post_1.Post(post.post, post.comments, this.user.isOwner(), this.user.label);
+	            let p = new post_1.Post(post.post, post.comments, post.tags, this.user.isOwner(), this.user.label);
 	            p.onEdit = this.makeOnEditCallback(p, post.post);
 	            p.onDelete = this.makeOnDeleteCallback(post.post.id);
 	            p.onEnterComment = this.makeOnEnterCommentCallback(p);
@@ -11201,6 +11202,12 @@
 	    });
 	}
 	exports.listIntraclinicTag = listIntraclinicTag;
+	function listIntraclinicTagForPost(postId) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service?_q=list_intra_clinic_tag_for_post", { post_id: postId }, "GET", TagArrayConverter);
+	    });
+	}
+	exports.listIntraclinicTagForPost = listIntraclinicTagForPost;
 	function renameIntraclinicTag(id, name) {
 	    return __awaiter(this, void 0, void 0, function* () {
 	        return request_1.request("/service?_q=rename_intra_clinic_tag", { id: id, name: name }, "POST", toBoolean);
@@ -26629,7 +26636,7 @@
 	    return out;
 	}
 	class Post {
-	    constructor(modelPost, modelComments, isOwner, userName) {
+	    constructor(modelPost, modelComments, tags, isOwner, userName) {
 	        this.onEdit = () => { };
 	        this.onDelete = () => { };
 	        this.onEnterComment = _ => { };
@@ -26642,6 +26649,7 @@
 	            this.datePart(),
 	            this.editPart(),
 	            this.contentPart(),
+	            this.tagPart(tags),
 	            this.commentsWrapper
 	        ]);
 	    }
@@ -26677,6 +26685,31 @@
 	    }
 	    contentPart() {
 	        return typed_dom_1.h.div({ "class": "content" }, formatContent(this.modelPost.content));
+	    }
+	    tagPart(tags) {
+	        if (tags.length === 0) {
+	            return null;
+	        }
+	        else {
+	            return typed_dom_1.h.div({
+	                style: "border:1px solid #ccc; padding: 6px"
+	            }, [
+	                "タグ： ",
+	                ...interpose(" ", tags.map(tag => {
+	                    return tag.name;
+	                }))
+	            ]);
+	        }
+	        function interpose(e, arr) {
+	            let result = [];
+	            arr.forEach((a, index) => {
+	                result.push(a);
+	                if (index !== (arr.length - 1)) {
+	                    result.push(e);
+	                }
+	            });
+	            return result;
+	        }
 	    }
 	    commentPart() {
 	        return typed_dom_1.h.table({
