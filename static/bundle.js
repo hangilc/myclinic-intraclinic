@@ -184,6 +184,7 @@
 	            let p = new post_1.Post(post.post, post.comments, post.tags, this.user.isOwner(), this.user.label);
 	            p.onEdit = this.makeOnEditCallback(p, post.post);
 	            p.onDelete = this.makeOnDeleteCallback(post.post.id);
+	            p.onEditTag = this.makeOnEditTagCallback(p, post.post.id);
 	            p.onEnterComment = this.makeOnEnterCommentCallback(p);
 	            wrapper.appendChild(p.dom);
 	        });
@@ -219,6 +220,10 @@
 	            yield service.deleteIntraclinicPost(postId);
 	            yield this.nav.recalc();
 	            this.nav.triggerPageChange();
+	        });
+	    }
+	    makeOnEditTagCallback(post, postId) {
+	        return () => __awaiter(this, void 0, void 0, function* () {
 	        });
 	    }
 	    makeOnEnterCommentCallback(post) {
@@ -26639,6 +26644,7 @@
 	    constructor(modelPost, modelComments, tags, isOwner, userName) {
 	        this.onEdit = () => { };
 	        this.onDelete = () => { };
+	        this.onEditTag = () => { };
 	        this.onEnterComment = _ => { };
 	        this.modelPost = modelPost;
 	        this.modelComments = modelComments;
@@ -26671,12 +26677,14 @@
 	            editLink.addEventListener("click", event => { this.onEdit(); });
 	            let deleteLink = typed_dom_1.h.a({ "class": "cmd-link" }, ["削除"]);
 	            deleteLink.addEventListener("click", event => { this.onDelete(); });
+	            let tagLink = typed_dom_1.h.a({ "class": "cmd-link" }, ["タグ"]);
+	            tagLink.addEventListener("click", event => { this.onEditTag(); });
 	            return typed_dom_1.h.div({
 	                style: "border:1px solid #ccc; padding: 6px"
 	            }, [
-	                editLink,
-	                " ",
-	                deleteLink,
+	                editLink, " ",
+	                deleteLink, " ",
+	                tagLink
 	            ]);
 	        }
 	        else {

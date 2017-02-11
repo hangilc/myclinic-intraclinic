@@ -22,6 +22,7 @@ export class Post {
 	commentsWrapper: HTMLElement;
 	onEdit: () => void = () => {};
 	onDelete: () => void = () => {};
+	onEditTag: () => void = () => {};
 	onEnterComment: (comment: IntraclinicComment) => void = _ => {};
 	private modelPost: IntraclinicPost;
 	private modelComments: IntraclinicComment[];
@@ -62,12 +63,14 @@ export class Post {
 			editLink.addEventListener("click", event => { this.onEdit() });
 			let deleteLink = h.a({"class": "cmd-link"}, ["削除"]);
 			deleteLink.addEventListener("click", event => { this.onDelete() });
+			let tagLink = h.a({"class": "cmd-link"}, ["タグ"]);
+			tagLink.addEventListener("click", event => { this.onEditTag(); })
 			return h.div({
 				style: "border:1px solid #ccc; padding: 6px"
 			}, [
-				editLink,
-				" ",
-				deleteLink,
+				editLink, " ",
+				deleteLink, " ",
+				tagLink
 			]);
 		} else {
 			return null;

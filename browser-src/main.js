@@ -138,6 +138,7 @@ class Main {
             let p = new post_1.Post(post.post, post.comments, post.tags, this.user.isOwner(), this.user.label);
             p.onEdit = this.makeOnEditCallback(p, post.post);
             p.onDelete = this.makeOnDeleteCallback(post.post.id);
+            p.onEditTag = this.makeOnEditTagCallback(p, post.post.id);
             p.onEnterComment = this.makeOnEnterCommentCallback(p);
             wrapper.appendChild(p.dom);
         });
@@ -173,6 +174,10 @@ class Main {
             yield service.deleteIntraclinicPost(postId);
             yield this.nav.recalc();
             this.nav.triggerPageChange();
+        });
+    }
+    makeOnEditTagCallback(post, postId) {
+        return () => __awaiter(this, void 0, void 0, function* () {
         });
     }
     makeOnEnterCommentCallback(post) {
