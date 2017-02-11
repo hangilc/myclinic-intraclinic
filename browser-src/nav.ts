@@ -379,6 +379,7 @@ export class NavManager {
 	}
 }
 
+/*
 abstract class NavMode {
 	protected onPageChange: (posts: IntraclinicPost[]) => void = (_) => {};
 	protected workarea: HTMLElement;
@@ -617,3 +618,4 @@ export class Nav {
 		]);
 	}
 }
+*/
