@@ -10567,32 +10567,10 @@
 	const service = __webpack_require__(4);
 	const kanjidate = __webpack_require__(8);
 	const moment = __webpack_require__(9);
-	class ChronoPageSet {
+	class PageSetBase {
 	    constructor() {
 	        this.totalPages = 0;
 	        this.currentPage = 0;
-	        this.itemsPerPage = 10;
-	    }
-	    recalc() {
-	        return __awaiter(this, void 0, void 0, function* () {
-	            let nPosts = yield service.countIntraclinicPosts();
-	            this.totalPages = this.calcNumberOfPages(nPosts, this.itemsPerPage);
-	            if (this.totalPages <= 0) {
-	                this.currentPage = 0;
-	            }
-	            else if (this.currentPage >= this.totalPages) {
-	                this.currentPage = this.totalPages - 1;
-	            }
-	        });
-	    }
-	    fetchPage() {
-	        return __awaiter(this, void 0, void 0, function* () {
-	            if (this.totalPages <= 0) {
-	                return [];
-	            }
-	            let offset = this.currentPage * this.itemsPerPage;
-	            return service.listIntraclinicPosts(offset, this.itemsPerPage);
-	        });
 	    }
 	    getTotalPages() {
 	        return this.totalPages;
@@ -10615,8 +10593,45 @@
 	            return false;
 	        }
 	    }
+	    setTotalPages(totalPages) {
+	        this.totalPages = totalPages;
+	    }
+	    setCurrentPage(currentPage) {
+	        if (currentPage >= this.totalPages) {
+	            currentPage = this.totalPages - 1;
+	        }
+	        if (currentPage < 0) {
+	            currentPage = 0;
+	        }
+	        this.currentPage = currentPage;
+	    }
+	    getCurrentPage() {
+	        return this.currentPage;
+	    }
 	    calcNumberOfPages(totalItems, itemsPerPage) {
 	        return Math.floor((totalItems + itemsPerPage - 1) / itemsPerPage);
+	    }
+	}
+	class ChronoPageSet extends PageSetBase {
+	    constructor() {
+	        super(...arguments);
+	        this.itemsPerPage = 10;
+	    }
+	    recalc() {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            let nPosts = yield service.countIntraclinicPosts();
+	            this.setTotalPages(this.calcNumberOfPages(nPosts, this.itemsPerPage));
+	            this.setCurrentPage(0);
+	        });
+	    }
+	    fetchPage() {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            if (this.getTotalPages() <= 0) {
+	                return [];
+	            }
+	            let offset = this.getCurrentPage() * this.itemsPerPage;
+	            return service.listIntraclinicPosts(offset, this.itemsPerPage);
+	        });
 	    }
 	}
 	class ChronoNavWidget {
@@ -10723,6 +10738,7 @@
 	            else {
 	                this.navDomList.forEach(navDom => { navDom.hide(); });
 	            }
+	            this.workarea.innerHTML = "";
 	            navWidget.setupWorkarea(this.workarea, this.onPageChange);
 	        });
 	    }

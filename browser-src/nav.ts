@@ -12,28 +12,12 @@ interface PageSet {
 	gotoPrevPage(): boolean;
 }
 
-class ChronoPageSet implements PageSet {
+abstract class PageSetBase implements PageSet {
+	abstract recalc(): Promise<void>;
+	abstract fetchPage(): Promise<IntraclinicPost[]>;
+
 	private totalPages: number = 0;
 	private currentPage: number = 0;
-	private itemsPerPage: number = 10;
-
-	async recalc(): Promise<void> {
-		let nPosts = await service.countIntraclinicPosts();
-		this.totalPages = this.calcNumberOfPages(nPosts, this.itemsPerPage);
-		if( this.totalPages <= 0 ){
-			this.currentPage = 0;
-		} else if( this.currentPage >= this.totalPages ) {
-			this.currentPage = this.totalPages - 1;
-		}
-	}
-
-	async fetchPage(): Promise<IntraclinicPost[]> {
-		if( this.totalPages <= 0 ){
-			return [];
-		}
-		let offset = this.currentPage * this.itemsPerPage;
-		return service.listIntraclinicPosts(offset, this.itemsPerPage);
-	}
 
 	getTotalPages(): number {
 		return this.totalPages;
@@ -57,8 +41,44 @@ class ChronoPageSet implements PageSet {
 		}
 	}
 
+	protected setTotalPages(totalPages: number): void {
+		this.totalPages = totalPages;
+	}
+
+	protected setCurrentPage(currentPage: number): void {
+		if( currentPage >= this.totalPages ){
+			currentPage = this.totalPages - 1;
+		}
+		if( currentPage < 0 ){
+			currentPage = 0;
+		}
+		this.currentPage = currentPage;
+	}
+
+	protected getCurrentPage(): number {
+		return this.currentPage;
+	}
+
 	protected calcNumberOfPages(totalItems: number, itemsPerPage: number): number {
 		return Math.floor((totalItems + itemsPerPage - 1) / itemsPerPage);
+	}
+}
+
+class ChronoPageSet extends PageSetBase implements PageSet {
+	private itemsPerPage: number = 10;
+
+	async recalc(): Promise<void> {
+		let nPosts = await service.countIntraclinicPosts();
+		this.setTotalPages(this.calcNumberOfPages(nPosts, this.itemsPerPage));
+		this.setCurrentPage(0);
+	}
+
+	async fetchPage(): Promise<IntraclinicPost[]> {
+		if( this.getTotalPages() <= 0 ){
+			return [];
+		}
+		let offset = this.getCurrentPage() * this.itemsPerPage;
+		return service.listIntraclinicPosts(offset, this.itemsPerPage);
 	}
 }
 
@@ -190,6 +210,7 @@ export class NavManager {
 		} else {
 			this.navDomList.forEach(navDom => { navDom.hide(); });
 		}
+		this.workarea.innerHTML = "";
 		navWidget.setupWorkarea(this.workarea, this.onPageChange);
 	}
 
