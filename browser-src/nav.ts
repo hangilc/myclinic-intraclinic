@@ -1,5 +1,6 @@
 import { h, appendToElement } from "./typed-dom";
 import { IntraclinicPost } from "./model/intraclinic-post";
+import { IntraclinicTag } from "./model/intraclinic-tag";
 import * as service from "./service";
 import * as kanjidate from "kanjidate";
 import * as moment from "moment";
@@ -62,6 +63,18 @@ abstract class PageSetBase implements PageSet {
 	protected calcNumberOfPages(totalItems: number, itemsPerPage: number): number {
 		return Math.floor((totalItems + itemsPerPage - 1) / itemsPerPage);
 	}
+}
+
+class NullPageSet extends PageSetBase implements PageSet {
+
+	async recalc(): Promise<void> {
+
+	}
+
+	async fetchPage(): Promise<IntraclinicPost[]> {
+		return [];
+	}
+
 }
 
 class ChronoPageSet extends PageSetBase implements PageSet {
@@ -168,9 +181,42 @@ class SearchPageSet extends PageSetBase implements PageSet {
 	}
 }
 
+class TagPageSet extends PageSetBase implements PageSet {
+	private itemsPerPage = 10;
+	private current: IntraclinicTag | null = null;
+
+	async recalc(): Promise<void> {
+		let current = this.current;
+		if( current === null ){
+			this.setTotalPages(0);
+			this.setCurrentPage(0);
+		} else {
+			let nPosts = await service.countIntraclinicTagPost(current.id);
+			this.setTotalPages(this.calcNumberOfPages(nPosts, this.itemsPerPage));
+			this.setCurrentPage(0);
+		}
+	}
+
+	async fetchPage(): Promise<IntraclinicPost[]> {
+		let current = this.current;
+		if( current === null ){
+			return [];
+		} else {
+			let offset = this.getCurrentPage() * this.itemsPerPage;
+			let n = this.itemsPerPage;
+			return service.listIntraclinicTagPost(current.id, offset, n);
+		}
+	}
+
+	setCurrentTag(tag: IntraclinicTag): void {
+		this.current = tag;
+	}
+
+}
+
 interface NavWidget {
 	getPageSet(): PageSet;
-	setupWorkarea(workarea: HTMLElement): void;
+	setupWorkarea(workarea: HTMLElement): Promise<void>;
 }
 
 class ChronoNavWidget implements NavWidget {
@@ -180,8 +226,8 @@ class ChronoNavWidget implements NavWidget {
 		return this.pageSet;
 	}
 
-	setupWorkarea(workarea: HTMLElement): void {
-
+	async setupWorkarea(workarea: HTMLElement): Promise<void> {
+		
 	}
 }
 
@@ -237,7 +283,7 @@ class ByMonthNavWidget implements NavWidget {
 		return this.pageSet;
 	}
 
-	setupWorkarea(workarea: HTMLElement): void {
+	async setupWorkarea(workarea: HTMLElement): Promise<void> {
 		workarea.appendChild(this.workareaContent.dom);
 	}
 }
@@ -287,12 +333,60 @@ class SearchNavWidget implements NavWidget {
 		return this.pageSet;
 	}
 
-	setupWorkarea(workarea: HTMLElement): void {
+	async setupWorkarea(workarea: HTMLElement): Promise<void> {
 		workarea.appendChild(this.workareaContent.dom);
 	}
 }
 
-type NavKind = "default" | "by-month" | "search";
+class TagSelector {
+	dom: HTMLElement;
+
+	constructor(tags: IntraclinicTag[], pageSet: TagPageSet, onPageChange: (posts: IntraclinicPost[]) => void,
+		updateNavDoms: (pageSet: PageSet) => void){
+		this.dom = h.div({}, [
+			h.ul({}, tags.map(tag => {
+				let a = h.a({}, [tag.name]);
+				a.addEventListener("click", async event => {
+					pageSet.setCurrentTag(tag);
+					await pageSet.recalc();
+					updateNavDoms(pageSet);
+					let posts = await pageSet.fetchPage();
+					onPageChange(posts);
+				})
+				return h.li({}, [a]);
+			}))
+		]);
+	}
+}
+
+class ByTagNavWidget implements NavWidget {
+	private pageSet = new TagPageSet();
+	private workareaContent: TagSelector | null = null;
+	private onPageChange: (posts: IntraclinicPost[]) => void;
+	private updateNavDoms: (pageSet: PageSet) => void;
+
+	constructor(onPageChange: (posts: IntraclinicPost[]) => void,
+		updateNavDoms: (pageSet: PageSet) => void) {
+		this.onPageChange = onPageChange;
+		this.updateNavDoms = updateNavDoms;
+	}
+
+	getPageSet(): PageSet {
+		return this.pageSet;
+	}
+
+	async setupWorkarea(workarea: HTMLElement): Promise<void> {
+		let content = this.workareaContent;
+		if( content === null ){
+			let tags = await service.listIntraclinicTag();
+			content = new TagSelector(tags, this.pageSet, this.onPageChange, this.updateNavDoms);
+			this.workareaContent = content;
+		}
+		appendToElement(workarea, [content.dom]);
+	}
+}
+
+type NavKind = "default" | "month" | "search" | "tag";
 
 class NavFactory {
 	private cache: {[kind: string]: NavWidget} = {};
@@ -315,8 +409,9 @@ class NavFactory {
 	private create(kind: NavKind): NavWidget {
 		switch(kind){
 			case "default": return new ChronoNavWidget();
-			case "by-month": return new ByMonthNavWidget(this.onPageChange, this.updateNavDoms);
+			case "month": return new ByMonthNavWidget(this.onPageChange, this.updateNavDoms);
 			case "search": return new SearchNavWidget(this.onPageChange, this.updateNavDoms);
+			case "tag": return new ByTagNavWidget(this.onPageChange, this.updateNavDoms);
 		}
 	}
 }
@@ -445,22 +540,28 @@ export class NavManager {
 		let mostRecent = h.input({type: "radio", name: "choice", checked: true}, []);
 		let byMonth = h.input({type: "radio", name: "choice"}, []);
 		let search = h.input({type: "radio", name: "choice"}, []);
+		let byTag = h.input({type: "radio", name: "choice"}, []);
 		mostRecent.addEventListener("click", event => {
 			this.switchTo("default");
 		})
 		byMonth.addEventListener("click", event => {
-			this.switchTo("by-month");
+			this.switchTo("month");
 		})
 		search.addEventListener("click", event => {
 			this.switchTo("search");
+		})
+		byTag.addEventListener("click", event => {
+			this.switchTo("tag");
 		})
 		appendToElement(wrapper, [
 			h.form({}, [
 				mostRecent, "日付順", " ",
 				byMonth, "月指定", " ",
-				search, "検索"
+				search, "検索", " ",
+				byTag, "タグ別"
 			])
 		])
 	}
 }
+
 

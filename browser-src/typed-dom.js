@@ -50,6 +50,9 @@ var h;
     h.option = makeCreator("option");
     h.span = makeCreator("span");
     h.textarea = makeCreator("textarea");
+    h.ul = makeCreator("ul");
+    h.ol = makeCreator("ol");
+    h.li = makeCreator("li");
     function form(attrs, children) {
         if (!("onSubmit" in attrs)) {
             attrs.onSubmit = "return false";

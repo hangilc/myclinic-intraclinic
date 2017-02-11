@@ -56,6 +56,17 @@ class PageSetBase {
         return Math.floor((totalItems + itemsPerPage - 1) / itemsPerPage);
     }
 }
+class NullPageSet extends PageSetBase {
+    recalc() {
+        return __awaiter(this, void 0, void 0, function* () {
+        });
+    }
+    fetchPage() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return [];
+        });
+    }
+}
 class ChronoPageSet extends PageSetBase {
     constructor() {
         super(...arguments);
@@ -173,6 +184,43 @@ class SearchPageSet extends PageSetBase {
         this.searchText = searchText;
     }
 }
+class TagPageSet extends PageSetBase {
+    constructor() {
+        super(...arguments);
+        this.itemsPerPage = 10;
+        this.current = null;
+    }
+    recalc() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let current = this.current;
+            if (current === null) {
+                this.setTotalPages(0);
+                this.setCurrentPage(0);
+            }
+            else {
+                let nPosts = yield service.countIntraclinicTagPost(current.id);
+                this.setTotalPages(this.calcNumberOfPages(nPosts, this.itemsPerPage));
+                this.setCurrentPage(0);
+            }
+        });
+    }
+    fetchPage() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let current = this.current;
+            if (current === null) {
+                return [];
+            }
+            else {
+                let offset = this.getCurrentPage() * this.itemsPerPage;
+                let n = this.itemsPerPage;
+                return service.listIntraclinicTagPost(current.id, offset, n);
+            }
+        });
+    }
+    setCurrentTag(tag) {
+        this.current = tag;
+    }
+}
 class ChronoNavWidget {
     constructor() {
         this.pageSet = new ChronoPageSet();
@@ -181,6 +229,8 @@ class ChronoNavWidget {
         return this.pageSet;
     }
     setupWorkarea(workarea) {
+        return __awaiter(this, void 0, void 0, function* () {
+        });
     }
 }
 class MonthSelector {
@@ -222,7 +272,9 @@ class ByMonthNavWidget {
         return this.pageSet;
     }
     setupWorkarea(workarea) {
-        workarea.appendChild(this.workareaContent.dom);
+        return __awaiter(this, void 0, void 0, function* () {
+            workarea.appendChild(this.workareaContent.dom);
+        });
     }
 }
 class SearchTextInput {
@@ -260,7 +312,48 @@ class SearchNavWidget {
         return this.pageSet;
     }
     setupWorkarea(workarea) {
-        workarea.appendChild(this.workareaContent.dom);
+        return __awaiter(this, void 0, void 0, function* () {
+            workarea.appendChild(this.workareaContent.dom);
+        });
+    }
+}
+class TagSelector {
+    constructor(tags, pageSet, onPageChange, updateNavDoms) {
+        this.dom = typed_dom_1.h.div({}, [
+            typed_dom_1.h.ul({}, tags.map(tag => {
+                let a = typed_dom_1.h.a({}, [tag.name]);
+                a.addEventListener("click", (event) => __awaiter(this, void 0, void 0, function* () {
+                    pageSet.setCurrentTag(tag);
+                    yield pageSet.recalc();
+                    updateNavDoms(pageSet);
+                    let posts = yield pageSet.fetchPage();
+                    onPageChange(posts);
+                }));
+                return typed_dom_1.h.li({}, [a]);
+            }))
+        ]);
+    }
+}
+class ByTagNavWidget {
+    constructor(onPageChange, updateNavDoms) {
+        this.pageSet = new TagPageSet();
+        this.workareaContent = null;
+        this.onPageChange = onPageChange;
+        this.updateNavDoms = updateNavDoms;
+    }
+    getPageSet() {
+        return this.pageSet;
+    }
+    setupWorkarea(workarea) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let content = this.workareaContent;
+            if (content === null) {
+                let tags = yield service.listIntraclinicTag();
+                content = new TagSelector(tags, this.pageSet, this.onPageChange, this.updateNavDoms);
+                this.workareaContent = content;
+            }
+            typed_dom_1.appendToElement(workarea, [content.dom]);
+        });
     }
 }
 class NavFactory {
@@ -278,8 +371,9 @@ class NavFactory {
     create(kind) {
         switch (kind) {
             case "default": return new ChronoNavWidget();
-            case "by-month": return new ByMonthNavWidget(this.onPageChange, this.updateNavDoms);
+            case "month": return new ByMonthNavWidget(this.onPageChange, this.updateNavDoms);
             case "search": return new SearchNavWidget(this.onPageChange, this.updateNavDoms);
+            case "tag": return new ByTagNavWidget(this.onPageChange, this.updateNavDoms);
         }
     }
 }
@@ -389,20 +483,25 @@ class NavManager {
         let mostRecent = typed_dom_1.h.input({ type: "radio", name: "choice", checked: true }, []);
         let byMonth = typed_dom_1.h.input({ type: "radio", name: "choice" }, []);
         let search = typed_dom_1.h.input({ type: "radio", name: "choice" }, []);
+        let byTag = typed_dom_1.h.input({ type: "radio", name: "choice" }, []);
         mostRecent.addEventListener("click", event => {
             this.switchTo("default");
         });
         byMonth.addEventListener("click", event => {
-            this.switchTo("by-month");
+            this.switchTo("month");
         });
         search.addEventListener("click", event => {
             this.switchTo("search");
+        });
+        byTag.addEventListener("click", event => {
+            this.switchTo("tag");
         });
         typed_dom_1.appendToElement(wrapper, [
             typed_dom_1.h.form({}, [
                 mostRecent, "日付順", " ",
                 byMonth, "月指定", " ",
-                search, "検索"
+                search, "検索", " ",
+                byTag, "タグ別"
             ])
         ]);
     }

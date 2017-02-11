@@ -50,6 +50,9 @@ export namespace h {
 	export let option = makeCreator<HTMLOptionElement>("option");
 	export let span = makeCreator<HTMLElement>("span");
 	export let textarea = makeCreator<HTMLTextAreaElement>("textarea");
+	export let ul = makeCreator<HTMLUListElement>("ul");
+	export let ol = makeCreator<HTMLOListElement>("ol");
+	export let li = makeCreator<HTMLLIElement>("li");
 
 	export function form(attrs: any, children: (HTMLElement|string|null)[]): HTMLFormElement{
 		if( !("onSubmit" in attrs) ){

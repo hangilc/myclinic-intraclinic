@@ -286,6 +286,9 @@
 	    h.option = makeCreator("option");
 	    h.span = makeCreator("span");
 	    h.textarea = makeCreator("textarea");
+	    h.ul = makeCreator("ul");
+	    h.ol = makeCreator("ol");
+	    h.li = makeCreator("li");
 	    function form(attrs, children) {
 	        if (!("onSubmit" in attrs)) {
 	            attrs.onSubmit = "return false";
@@ -10612,6 +10615,17 @@
 	        return Math.floor((totalItems + itemsPerPage - 1) / itemsPerPage);
 	    }
 	}
+	class NullPageSet extends PageSetBase {
+	    recalc() {
+	        return __awaiter(this, void 0, void 0, function* () {
+	        });
+	    }
+	    fetchPage() {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            return [];
+	        });
+	    }
+	}
 	class ChronoPageSet extends PageSetBase {
 	    constructor() {
 	        super(...arguments);
@@ -10729,6 +10743,43 @@
 	        this.searchText = searchText;
 	    }
 	}
+	class TagPageSet extends PageSetBase {
+	    constructor() {
+	        super(...arguments);
+	        this.itemsPerPage = 10;
+	        this.current = null;
+	    }
+	    recalc() {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            let current = this.current;
+	            if (current === null) {
+	                this.setTotalPages(0);
+	                this.setCurrentPage(0);
+	            }
+	            else {
+	                let nPosts = yield service.countIntraclinicTagPost(current.id);
+	                this.setTotalPages(this.calcNumberOfPages(nPosts, this.itemsPerPage));
+	                this.setCurrentPage(0);
+	            }
+	        });
+	    }
+	    fetchPage() {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            let current = this.current;
+	            if (current === null) {
+	                return [];
+	            }
+	            else {
+	                let offset = this.getCurrentPage() * this.itemsPerPage;
+	                let n = this.itemsPerPage;
+	                return service.listIntraclinicTagPost(current.id, offset, n);
+	            }
+	        });
+	    }
+	    setCurrentTag(tag) {
+	        this.current = tag;
+	    }
+	}
 	class ChronoNavWidget {
 	    constructor() {
 	        this.pageSet = new ChronoPageSet();
@@ -10737,6 +10788,8 @@
 	        return this.pageSet;
 	    }
 	    setupWorkarea(workarea) {
+	        return __awaiter(this, void 0, void 0, function* () {
+	        });
 	    }
 	}
 	class MonthSelector {
@@ -10778,7 +10831,9 @@
 	        return this.pageSet;
 	    }
 	    setupWorkarea(workarea) {
-	        workarea.appendChild(this.workareaContent.dom);
+	        return __awaiter(this, void 0, void 0, function* () {
+	            workarea.appendChild(this.workareaContent.dom);
+	        });
 	    }
 	}
 	class SearchTextInput {
@@ -10816,7 +10871,48 @@
 	        return this.pageSet;
 	    }
 	    setupWorkarea(workarea) {
-	        workarea.appendChild(this.workareaContent.dom);
+	        return __awaiter(this, void 0, void 0, function* () {
+	            workarea.appendChild(this.workareaContent.dom);
+	        });
+	    }
+	}
+	class TagSelector {
+	    constructor(tags, pageSet, onPageChange, updateNavDoms) {
+	        this.dom = typed_dom_1.h.div({}, [
+	            typed_dom_1.h.ul({}, tags.map(tag => {
+	                let a = typed_dom_1.h.a({}, [tag.name]);
+	                a.addEventListener("click", (event) => __awaiter(this, void 0, void 0, function* () {
+	                    pageSet.setCurrentTag(tag);
+	                    yield pageSet.recalc();
+	                    updateNavDoms(pageSet);
+	                    let posts = yield pageSet.fetchPage();
+	                    onPageChange(posts);
+	                }));
+	                return typed_dom_1.h.li({}, [a]);
+	            }))
+	        ]);
+	    }
+	}
+	class ByTagNavWidget {
+	    constructor(onPageChange, updateNavDoms) {
+	        this.pageSet = new TagPageSet();
+	        this.workareaContent = null;
+	        this.onPageChange = onPageChange;
+	        this.updateNavDoms = updateNavDoms;
+	    }
+	    getPageSet() {
+	        return this.pageSet;
+	    }
+	    setupWorkarea(workarea) {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            let content = this.workareaContent;
+	            if (content === null) {
+	                let tags = yield service.listIntraclinicTag();
+	                content = new TagSelector(tags, this.pageSet, this.onPageChange, this.updateNavDoms);
+	                this.workareaContent = content;
+	            }
+	            typed_dom_1.appendToElement(workarea, [content.dom]);
+	        });
 	    }
 	}
 	class NavFactory {
@@ -10834,8 +10930,9 @@
 	    create(kind) {
 	        switch (kind) {
 	            case "default": return new ChronoNavWidget();
-	            case "by-month": return new ByMonthNavWidget(this.onPageChange, this.updateNavDoms);
+	            case "month": return new ByMonthNavWidget(this.onPageChange, this.updateNavDoms);
 	            case "search": return new SearchNavWidget(this.onPageChange, this.updateNavDoms);
+	            case "tag": return new ByTagNavWidget(this.onPageChange, this.updateNavDoms);
 	        }
 	    }
 	}
@@ -10945,20 +11042,25 @@
 	        let mostRecent = typed_dom_1.h.input({ type: "radio", name: "choice", checked: true }, []);
 	        let byMonth = typed_dom_1.h.input({ type: "radio", name: "choice" }, []);
 	        let search = typed_dom_1.h.input({ type: "radio", name: "choice" }, []);
+	        let byTag = typed_dom_1.h.input({ type: "radio", name: "choice" }, []);
 	        mostRecent.addEventListener("click", event => {
 	            this.switchTo("default");
 	        });
 	        byMonth.addEventListener("click", event => {
-	            this.switchTo("by-month");
+	            this.switchTo("month");
 	        });
 	        search.addEventListener("click", event => {
 	            this.switchTo("search");
+	        });
+	        byTag.addEventListener("click", event => {
+	            this.switchTo("tag");
 	        });
 	        typed_dom_1.appendToElement(wrapper, [
 	            typed_dom_1.h.form({}, [
 	                mostRecent, "日付順", " ",
 	                byMonth, "月指定", " ",
-	                search, "検索"
+	                search, "検索", " ",
+	                byTag, "タグ別"
 	            ])
 	        ]);
 	    }
@@ -10982,14 +11084,19 @@
 	const request_1 = __webpack_require__(5);
 	const intraclinic_post_1 = __webpack_require__(6);
 	const intraclinic_comment_1 = __webpack_require__(7);
+	const intraclinic_tag_1 = __webpack_require__(122);
 	function toNumber(src) {
 	    return +src;
 	}
 	function toText(src) {
 	    return "" + src;
 	}
+	function toBoolean(src) {
+	    return src === true;
+	}
 	let PostArrayConverter = request_1.arrayConverter(intraclinic_post_1.jsonToIntraclinicPost);
 	let CommentArrayConverter = request_1.arrayConverter(intraclinic_comment_1.jsonToIntraclinicComment);
+	let TagArrayConverter = request_1.arrayConverter(intraclinic_tag_1.jsonToIntraclinicTag);
 	function countIntraclinicPosts() {
 	    return __awaiter(this, void 0, void 0, function* () {
 	        return request_1.request("/service", { _q: "count_intra_clinic_posts" }, "GET", toNumber);
@@ -11076,6 +11183,60 @@
 	    });
 	}
 	exports.searchIntraclinic = searchIntraclinic;
+	function createIntraclinicTag(name) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service?_q=create_intra_clinic_tag", { name: name }, "POST", toNumber);
+	    });
+	}
+	exports.createIntraclinicTag = createIntraclinicTag;
+	function getIntraclinicTag(id) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service?_q=get_intra_clinic_tag", { id: id }, "GET", intraclinic_tag_1.jsonToIntraclinicTag);
+	    });
+	}
+	exports.getIntraclinicTag = getIntraclinicTag;
+	function listIntraclinicTag() {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service?_q=list_intra_clinic_tag", {}, "GET", TagArrayConverter);
+	    });
+	}
+	exports.listIntraclinicTag = listIntraclinicTag;
+	function renameIntraclinicTag(id, name) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service?_q=rename_intra_clinic_tag", { id: id, name: name }, "POST", toBoolean);
+	    });
+	}
+	exports.renameIntraclinicTag = renameIntraclinicTag;
+	function deleteIntraclinicTag(id) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service?_q=delete_intra_clinic_tag", { id: id }, "POST", toBoolean);
+	    });
+	}
+	exports.deleteIntraclinicTag = deleteIntraclinicTag;
+	function addIntraclinicPostToTag(tagId, postId) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service?_q=add_intra_clinic_post_to_tag", { tag_id: tagId, post_id: postId }, "POST", toBoolean);
+	    });
+	}
+	exports.addIntraclinicPostToTag = addIntraclinicPostToTag;
+	function removeIntraclinicPostFromTag(tagId, postId) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service?_q=remove_intra_clinic_post_from_tag", { tag_id: tagId, post_id: postId }, "POST", toBoolean);
+	    });
+	}
+	exports.removeIntraclinicPostFromTag = removeIntraclinicPostFromTag;
+	function countIntraclinicTagPost(tagId) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service?_q=count_intra_clinic_tag_post", { tag_id: tagId }, "GET", toNumber);
+	    });
+	}
+	exports.countIntraclinicTagPost = countIntraclinicTagPost;
+	function listIntraclinicTagPost(tagId, offset, n) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service?_q=list_intra_clinic_tag_post", { tag_id: tagId, offset: offset, n: n }, "GET", PostArrayConverter);
+	    });
+	}
+	exports.listIntraclinicTagPost = listIntraclinicTagPost;
 
 
 /***/ },
@@ -26619,6 +26780,23 @@
 	    }
 	}
 	exports.PostForm = PostForm;
+
+
+/***/ },
+/* 122 */
+/***/ function(module, exports) {
+
+	"use strict";
+	class IntraclinicTag {
+	}
+	exports.IntraclinicTag = IntraclinicTag;
+	function jsonToIntraclinicTag(src) {
+	    let tag = new IntraclinicTag();
+	    tag.id = src.id;
+	    tag.name = src.name;
+	    return tag;
+	}
+	exports.jsonToIntraclinicTag = jsonToIntraclinicTag;
 
 
 /***/ }

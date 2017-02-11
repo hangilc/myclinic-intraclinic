@@ -10,14 +10,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 const request_1 = require("./request");
 const intraclinic_post_1 = require("./model/intraclinic-post");
 const intraclinic_comment_1 = require("./model/intraclinic-comment");
+const intraclinic_tag_1 = require("./model/intraclinic-tag");
 function toNumber(src) {
     return +src;
 }
 function toText(src) {
     return "" + src;
 }
+function toBoolean(src) {
+    return src === true;
+}
 let PostArrayConverter = request_1.arrayConverter(intraclinic_post_1.jsonToIntraclinicPost);
 let CommentArrayConverter = request_1.arrayConverter(intraclinic_comment_1.jsonToIntraclinicComment);
+let TagArrayConverter = request_1.arrayConverter(intraclinic_tag_1.jsonToIntraclinicTag);
 function countIntraclinicPosts() {
     return __awaiter(this, void 0, void 0, function* () {
         return request_1.request("/service", { _q: "count_intra_clinic_posts" }, "GET", toNumber);
@@ -104,3 +109,57 @@ function searchIntraclinic(text, offset, n) {
     });
 }
 exports.searchIntraclinic = searchIntraclinic;
+function createIntraclinicTag(name) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return request_1.request("/service?_q=create_intra_clinic_tag", { name: name }, "POST", toNumber);
+    });
+}
+exports.createIntraclinicTag = createIntraclinicTag;
+function getIntraclinicTag(id) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return request_1.request("/service?_q=get_intra_clinic_tag", { id: id }, "GET", intraclinic_tag_1.jsonToIntraclinicTag);
+    });
+}
+exports.getIntraclinicTag = getIntraclinicTag;
+function listIntraclinicTag() {
+    return __awaiter(this, void 0, void 0, function* () {
+        return request_1.request("/service?_q=list_intra_clinic_tag", {}, "GET", TagArrayConverter);
+    });
+}
+exports.listIntraclinicTag = listIntraclinicTag;
+function renameIntraclinicTag(id, name) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return request_1.request("/service?_q=rename_intra_clinic_tag", { id: id, name: name }, "POST", toBoolean);
+    });
+}
+exports.renameIntraclinicTag = renameIntraclinicTag;
+function deleteIntraclinicTag(id) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return request_1.request("/service?_q=delete_intra_clinic_tag", { id: id }, "POST", toBoolean);
+    });
+}
+exports.deleteIntraclinicTag = deleteIntraclinicTag;
+function addIntraclinicPostToTag(tagId, postId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return request_1.request("/service?_q=add_intra_clinic_post_to_tag", { tag_id: tagId, post_id: postId }, "POST", toBoolean);
+    });
+}
+exports.addIntraclinicPostToTag = addIntraclinicPostToTag;
+function removeIntraclinicPostFromTag(tagId, postId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return request_1.request("/service?_q=remove_intra_clinic_post_from_tag", { tag_id: tagId, post_id: postId }, "POST", toBoolean);
+    });
+}
+exports.removeIntraclinicPostFromTag = removeIntraclinicPostFromTag;
+function countIntraclinicTagPost(tagId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return request_1.request("/service?_q=count_intra_clinic_tag_post", { tag_id: tagId }, "GET", toNumber);
+    });
+}
+exports.countIntraclinicTagPost = countIntraclinicTagPost;
+function listIntraclinicTagPost(tagId, offset, n) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return request_1.request("/service?_q=list_intra_clinic_tag_post", { tag_id: tagId, offset: offset, n: n }, "GET", PostArrayConverter);
+    });
+}
+exports.listIntraclinicTagPost = listIntraclinicTagPost;
