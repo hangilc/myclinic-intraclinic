@@ -92,3 +92,15 @@ function countIntraclinicOlderThan(date) {
     });
 }
 exports.countIntraclinicOlderThan = countIntraclinicOlderThan;
+function countIntraclinicSearch(text) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return request_1.request("/service?_q=count_intra_clinic_search", { text: text }, "GET", toNumber);
+    });
+}
+exports.countIntraclinicSearch = countIntraclinicSearch;
+function searchIntraclinic(text, offset, n) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return request_1.request("/service?_q=search_intra_clinic", { text: text, offset: offset, n: n }, "GET", PostArrayConverter);
+    });
+}
+exports.searchIntraclinic = searchIntraclinic;

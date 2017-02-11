@@ -68,3 +68,11 @@ export async function enterIntraclinicComment(name: string, content: string, pos
 export async function countIntraclinicOlderThan(date: string): Promise<number> {
 	return request("/service?_q=count_intra_clinic_posts_older_than", { date: date }, "GET", toNumber);
 }
+
+export async function countIntraclinicSearch(text: string): Promise<number> {
+	return request("/service?_q=count_intra_clinic_search", { text: text }, "GET", toNumber);
+}
+
+export async function searchIntraclinic(text: string, offset: number, n: number): Promise<IntraclinicPost[]> {
+	return request("/service?_q=search_intra_clinic", { text: text, offset: offset, n: n }, "GET", PostArrayConverter);
+}
