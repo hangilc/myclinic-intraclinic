@@ -405,6 +405,7 @@ class NavDom {
 class NavManager {
     constructor(onPageChange, menuArea, workarea) {
         this.navDomList = [];
+        this.currentNavKind = null;
         this.onPageChange = onPageChange;
         this.setupMenu(menuArea);
         this.workarea = workarea;
@@ -418,6 +419,9 @@ class NavManager {
         let navDom = new NavDom(this.navDomCallbacks);
         this.navDomList.push(navDom);
         return navDom.dom;
+    }
+    getCurrentNavKind() {
+        return this.currentNavKind;
     }
     init() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -446,6 +450,7 @@ class NavManager {
         return __awaiter(this, void 0, void 0, function* () {
             let navWidget = this.navFactory.get(kind);
             this.current = navWidget;
+            this.currentNavKind = kind;
             yield navWidget.getPageSet().recalc();
             this.updateNavDoms(navWidget.getPageSet());
             this.workarea.innerHTML = "";

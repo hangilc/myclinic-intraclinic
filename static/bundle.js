@@ -232,9 +232,16 @@
 	                    if (!ok) {
 	                        return;
 	                    }
-	                    let tags = yield service.listIntraclinicTagForPost(postId);
-	                    post.tagWorkarea.innerHTML = "";
-	                    post.updateTagsArea(tags);
+	                    let currentNavKind = this.nav.getCurrentNavKind();
+	                    if (currentNavKind === "tag") {
+	                        yield this.nav.recalc();
+	                        this.nav.triggerPageChange();
+	                    }
+	                    else {
+	                        let tags = yield service.listIntraclinicTagForPost(postId);
+	                        post.tagWorkarea.innerHTML = "";
+	                        post.updateTagsArea(tags);
+	                    }
 	                }));
 	                typed_dom_1.appendToElement(post.tagWorkarea, [form.dom]);
 	            }
@@ -10990,6 +10997,7 @@
 	class NavManager {
 	    constructor(onPageChange, menuArea, workarea) {
 	        this.navDomList = [];
+	        this.currentNavKind = null;
 	        this.onPageChange = onPageChange;
 	        this.setupMenu(menuArea);
 	        this.workarea = workarea;
@@ -11003,6 +11011,9 @@
 	        let navDom = new NavDom(this.navDomCallbacks);
 	        this.navDomList.push(navDom);
 	        return navDom.dom;
+	    }
+	    getCurrentNavKind() {
+	        return this.currentNavKind;
 	    }
 	    init() {
 	        return __awaiter(this, void 0, void 0, function* () {
@@ -11031,6 +11042,7 @@
 	        return __awaiter(this, void 0, void 0, function* () {
 	            let navWidget = this.navFactory.get(kind);
 	            this.current = navWidget;
+	            this.currentNavKind = kind;
 	            yield navWidget.getPageSet().recalc();
 	            this.updateNavDoms(navWidget.getPageSet());
 	            this.workarea.innerHTML = "";

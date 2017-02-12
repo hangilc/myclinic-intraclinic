@@ -386,7 +386,7 @@ class ByTagNavWidget implements NavWidget {
 	}
 }
 
-type NavKind = "default" | "month" | "search" | "tag";
+export type NavKind = "default" | "month" | "search" | "tag";
 
 class NavFactory {
 	private cache: {[kind: string]: NavWidget} = {};
@@ -460,6 +460,7 @@ export class NavManager {
 	navFactory: NavFactory;
 	navDomList: NavDom[] = [];
 	navDomCallbacks: NavDomCallbacks;
+	private currentNavKind: NavKind | null = null;
 
 	constructor(onPageChange: (posts: IntraclinicPost[]) => void, menuArea: HTMLElement, workarea: HTMLElement) {
 		this.onPageChange = onPageChange;
@@ -476,6 +477,10 @@ export class NavManager {
 		let navDom = new NavDom(this.navDomCallbacks);
 		this.navDomList.push(navDom);
 		return navDom.dom;
+	}
+
+	getCurrentNavKind(): NavKind | null {
+		return this.currentNavKind;
 	}
 
 	async init(): Promise<void> {
@@ -501,6 +506,7 @@ export class NavManager {
 	private async switchTo(kind: NavKind): Promise<void> {
 		let navWidget = this.navFactory.get(kind);
 		this.current = navWidget;
+		this.currentNavKind = kind;
 		await navWidget.getPageSet().recalc();
 		this.updateNavDoms(navWidget.getPageSet());
 		this.workarea.innerHTML = "";

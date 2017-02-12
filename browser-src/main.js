@@ -186,9 +186,16 @@ class Main {
                     if (!ok) {
                         return;
                     }
-                    let tags = yield service.listIntraclinicTagForPost(postId);
-                    post.tagWorkarea.innerHTML = "";
-                    post.updateTagsArea(tags);
+                    let currentNavKind = this.nav.getCurrentNavKind();
+                    if (currentNavKind === "tag") {
+                        yield this.nav.recalc();
+                        this.nav.triggerPageChange();
+                    }
+                    else {
+                        let tags = yield service.listIntraclinicTagForPost(postId);
+                        post.tagWorkarea.innerHTML = "";
+                        post.updateTagsArea(tags);
+                    }
                 }));
                 typed_dom_1.appendToElement(post.tagWorkarea, [form.dom]);
             }

@@ -1,6 +1,6 @@
 import { h, appendToElement, removeElement } from "./typed-dom";
 import * as $ from "jquery";
-import { NavManager } from "./nav";
+import { NavManager, NavKind } from "./nav";
 import { IntraclinicPost } from "./model/intraclinic-post";
 import { IntraclinicComment } from "./model/intraclinic-comment";
 import { IntraclinicTag } from "./model/intraclinic-tag";
@@ -203,9 +203,15 @@ class Main {
 					if( !ok ){
 						return;
 					}
-					let tags = await service.listIntraclinicTagForPost(postId);
-					post.tagWorkarea.innerHTML = "";
-					post.updateTagsArea(tags);
+					let currentNavKind = this.nav.getCurrentNavKind();
+					if( currentNavKind === "tag" ){
+						await this.nav.recalc();
+						this.nav.triggerPageChange();
+					} else {
+						let tags = await service.listIntraclinicTagForPost(postId);
+						post.tagWorkarea.innerHTML = "";
+						post.updateTagsArea(tags);
+					}
 				});
 				appendToElement(post.tagWorkarea, [form.dom]);
 			} else {
