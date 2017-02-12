@@ -68,7 +68,7 @@ class Main {
 		let navMenu = h.div({}, []);
 		let navWork = h.div({}, []);
 		this.postsWrapper = h.div({}, []);
-		this.nav = new NavManager(posts => { this.onPageChange(posts); }, navMenu, navWork);
+		this.nav = new NavManager(posts => { this.onPageChange(posts); }, navMenu, navWork, user.isOwner());
 		this.dom = h.div({}, [
 			h.h1({}, ["院内ミーティング"]),
 			this.userDisp(),

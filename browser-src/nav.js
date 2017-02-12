@@ -8,6 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 const typed_dom_1 = require("./typed-dom");
+const tag_form_1 = require("./tag-form");
 const service = require("./service");
 const kanjidate = require("kanjidate");
 const moment = require("moment");
@@ -190,6 +191,9 @@ class TagPageSet extends PageSetBase {
         this.itemsPerPage = 10;
         this.current = null;
     }
+    getCurrentTag() {
+        return this.current;
+    }
     recalc() {
         return __awaiter(this, void 0, void 0, function* () {
             let current = this.current;
@@ -318,28 +322,59 @@ class SearchNavWidget {
     }
 }
 class TagSelector {
-    constructor(tags, pageSet, onPageChange, updateNavDoms) {
-        this.dom = typed_dom_1.h.div({}, [
-            typed_dom_1.h.ul({}, tags.map(tag => {
+    constructor(tags, pageSet, onPageChange, updateNavDoms, isOwner) {
+        this.tags = tags;
+        this.pageSet = pageSet;
+        this.onPageChange = onPageChange;
+        this.updateNavDoms = updateNavDoms;
+        this.isOwner = isOwner;
+        this.dom = typed_dom_1.h.div({}, []);
+        this.updateDom();
+    }
+    updateDom() {
+        this.dom.innerHTML = "";
+        typed_dom_1.appendToElement(this.dom, [
+            typed_dom_1.h.ul({}, this.tags.map(tag => {
+                let pageSet = this.pageSet;
                 let a = typed_dom_1.h.a({}, [tag.name]);
+                let currentTag = pageSet.getCurrentTag();
+                if (currentTag !== null) {
+                    if (tag.id === currentTag.id) {
+                        a.style.color = "red";
+                    }
+                }
                 a.addEventListener("click", (event) => __awaiter(this, void 0, void 0, function* () {
-                    pageSet.setCurrentTag(tag);
-                    yield pageSet.recalc();
-                    updateNavDoms(pageSet);
-                    let posts = yield pageSet.fetchPage();
-                    onPageChange(posts);
+                    this.pageSet.setCurrentTag(tag);
+                    return this.reloadPage();
                 }));
                 return typed_dom_1.h.li({}, [a]);
-            }))
+            })),
+            this.isOwner ? new tag_form_1.TagForm({
+                onNewTag: (newTagId) => __awaiter(this, void 0, void 0, function* () {
+                    this.tags = yield service.listIntraclinicTag();
+                    return this.reloadPage();
+                })
+            }).dom : null
         ]);
+    }
+    reloadPage() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let pageSet = this.pageSet;
+            yield pageSet.recalc();
+            this.updateNavDoms(pageSet);
+            let posts = yield pageSet.fetchPage();
+            this.onPageChange(posts);
+            this.updateDom();
+        });
     }
 }
 class ByTagNavWidget {
-    constructor(onPageChange, updateNavDoms) {
+    constructor(onPageChange, updateNavDoms, isOwner) {
         this.pageSet = new TagPageSet();
         this.workareaContent = null;
         this.onPageChange = onPageChange;
         this.updateNavDoms = updateNavDoms;
+        this.isOwner = isOwner;
     }
     getPageSet() {
         return this.pageSet;
@@ -349,7 +384,7 @@ class ByTagNavWidget {
             let content = this.workareaContent;
             if (content === null) {
                 let tags = yield service.listIntraclinicTag();
-                content = new TagSelector(tags, this.pageSet, this.onPageChange, this.updateNavDoms);
+                content = new TagSelector(tags, this.pageSet, this.onPageChange, this.updateNavDoms, this.isOwner);
                 this.workareaContent = content;
             }
             typed_dom_1.appendToElement(workarea, [content.dom]);
@@ -357,10 +392,11 @@ class ByTagNavWidget {
     }
 }
 class NavFactory {
-    constructor(onPageChange, updateNavDoms) {
+    constructor(onPageChange, updateNavDoms, isOwner) {
         this.cache = {};
         this.onPageChange = onPageChange;
         this.updateNavDoms = updateNavDoms;
+        this.isOwner = isOwner;
     }
     get(kind) {
         if (!(kind in this.cache)) {
@@ -373,7 +409,7 @@ class NavFactory {
             case "default": return new ChronoNavWidget();
             case "month": return new ByMonthNavWidget(this.onPageChange, this.updateNavDoms);
             case "search": return new SearchNavWidget(this.onPageChange, this.updateNavDoms);
-            case "tag": return new ByTagNavWidget(this.onPageChange, this.updateNavDoms);
+            case "tag": return new ByTagNavWidget(this.onPageChange, this.updateNavDoms, this.isOwner);
         }
     }
 }
@@ -403,13 +439,13 @@ class NavDom {
     }
 }
 class NavManager {
-    constructor(onPageChange, menuArea, workarea) {
+    constructor(onPageChange, menuArea, workarea, isOwner) {
         this.navDomList = [];
         this.currentNavKind = null;
         this.onPageChange = onPageChange;
         this.setupMenu(menuArea);
         this.workarea = workarea;
-        this.navFactory = new NavFactory(onPageChange, (pageSet) => { this.updateNavDoms(pageSet); });
+        this.navFactory = new NavFactory(onPageChange, (pageSet) => { this.updateNavDoms(pageSet); }, isOwner);
         this.navDomCallbacks = {
             onPrev: () => { this.onPrev(); },
             onNext: () => { this.onNext(); }

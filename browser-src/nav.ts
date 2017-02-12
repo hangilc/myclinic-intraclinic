@@ -1,6 +1,7 @@
 import { h, appendToElement } from "./typed-dom";
 import { IntraclinicPost } from "./model/intraclinic-post";
 import { IntraclinicTag } from "./model/intraclinic-tag";
+import { TagForm } from "./tag-form";
 import * as service from "./service";
 import * as kanjidate from "kanjidate";
 import * as moment from "moment";
@@ -185,6 +186,10 @@ class TagPageSet extends PageSetBase implements PageSet {
 	private itemsPerPage = 10;
 	private current: IntraclinicTag | null = null;
 
+	getCurrentTag(): IntraclinicTag | null {
+		return this.current;
+	}
+
 	async recalc(): Promise<void> {
 		let current = this.current;
 		if( current === null ){
@@ -340,22 +345,57 @@ class SearchNavWidget implements NavWidget {
 
 class TagSelector {
 	dom: HTMLElement;
+	private tags: IntraclinicTag[];
+	private pageSet: TagPageSet;
+	private onPageChange: (posts: IntraclinicPost[]) => void;
+	private updateNavDoms: (pageSet: PageSet) => void;
+	private isOwner: boolean;
 
 	constructor(tags: IntraclinicTag[], pageSet: TagPageSet, onPageChange: (posts: IntraclinicPost[]) => void,
-		updateNavDoms: (pageSet: PageSet) => void){
-		this.dom = h.div({}, [
-			h.ul({}, tags.map(tag => {
+		updateNavDoms: (pageSet: PageSet) => void, isOwner: boolean){
+		this.tags = tags;
+		this.pageSet = pageSet;
+		this.onPageChange = onPageChange;
+		this.updateNavDoms = updateNavDoms;
+		this.isOwner = isOwner;
+		this.dom = h.div({}, []);
+		this.updateDom();
+	}
+
+	private updateDom(): void {
+		this.dom.innerHTML = "";
+		appendToElement(this.dom, [
+			h.ul({}, this.tags.map(tag => {
+				let pageSet = this.pageSet;
 				let a = h.a({}, [tag.name]);
+				let currentTag = pageSet.getCurrentTag();
+				if( currentTag !== null ){
+					if( tag.id === currentTag.id ){
+						a.style.color = "red";
+					}
+				}
 				a.addEventListener("click", async event => {
-					pageSet.setCurrentTag(tag);
-					await pageSet.recalc();
-					updateNavDoms(pageSet);
-					let posts = await pageSet.fetchPage();
-					onPageChange(posts);
+					this.pageSet.setCurrentTag(tag);
+					return this.reloadPage();
 				})
 				return h.li({}, [a]);
-			}))
+			})),
+			this.isOwner ? new TagForm({
+				onNewTag: async (newTagId) => {
+					this.tags = await service.listIntraclinicTag();
+					return this.reloadPage();
+				}
+			}).dom : null
 		]);
+	}
+
+	private async reloadPage(): Promise<void> {
+		let pageSet = this.pageSet;
+		await pageSet.recalc();
+		this.updateNavDoms(pageSet);
+		let posts = await pageSet.fetchPage();
+		this.onPageChange(posts);
+		this.updateDom();
 	}
 }
 
@@ -364,11 +404,13 @@ class ByTagNavWidget implements NavWidget {
 	private workareaContent: TagSelector | null = null;
 	private onPageChange: (posts: IntraclinicPost[]) => void;
 	private updateNavDoms: (pageSet: PageSet) => void;
+	private isOwner: boolean;
 
 	constructor(onPageChange: (posts: IntraclinicPost[]) => void,
-		updateNavDoms: (pageSet: PageSet) => void) {
+		updateNavDoms: (pageSet: PageSet) => void, isOwner: boolean) {
 		this.onPageChange = onPageChange;
 		this.updateNavDoms = updateNavDoms;
+		this.isOwner = isOwner;
 	}
 
 	getPageSet(): PageSet {
@@ -379,7 +421,7 @@ class ByTagNavWidget implements NavWidget {
 		let content = this.workareaContent;
 		if( content === null ){
 			let tags = await service.listIntraclinicTag();
-			content = new TagSelector(tags, this.pageSet, this.onPageChange, this.updateNavDoms);
+			content = new TagSelector(tags, this.pageSet, this.onPageChange, this.updateNavDoms, this.isOwner);
 			this.workareaContent = content;
 		}
 		appendToElement(workarea, [content.dom]);
@@ -392,11 +434,13 @@ class NavFactory {
 	private cache: {[kind: string]: NavWidget} = {};
 	private onPageChange: (posts: IntraclinicPost[]) => void;
 	private updateNavDoms: (pageSet: PageSet) => void;
+	private isOwner: boolean;
 
 	constructor(onPageChange: (posts: IntraclinicPost[]) => void,
-		updateNavDoms: (pageSet: PageSet) => void) {
+		updateNavDoms: (pageSet: PageSet) => void, isOwner: boolean) {
 		this.onPageChange = onPageChange;
 		this.updateNavDoms = updateNavDoms;
+		this.isOwner = isOwner;
 	}
 
 	get(kind: NavKind): NavWidget {
@@ -411,7 +455,7 @@ class NavFactory {
 			case "default": return new ChronoNavWidget();
 			case "month": return new ByMonthNavWidget(this.onPageChange, this.updateNavDoms);
 			case "search": return new SearchNavWidget(this.onPageChange, this.updateNavDoms);
-			case "tag": return new ByTagNavWidget(this.onPageChange, this.updateNavDoms);
+			case "tag": return new ByTagNavWidget(this.onPageChange, this.updateNavDoms, this.isOwner);
 		}
 	}
 }
@@ -462,11 +506,12 @@ export class NavManager {
 	navDomCallbacks: NavDomCallbacks;
 	private currentNavKind: NavKind | null = null;
 
-	constructor(onPageChange: (posts: IntraclinicPost[]) => void, menuArea: HTMLElement, workarea: HTMLElement) {
+	constructor(onPageChange: (posts: IntraclinicPost[]) => void, menuArea: HTMLElement, workarea: HTMLElement,
+		isOwner: boolean) {
 		this.onPageChange = onPageChange;
 		this.setupMenu(menuArea);
 		this.workarea = workarea;
-		this.navFactory = new NavFactory(onPageChange, (pageSet: PageSet) => { this.updateNavDoms(pageSet); });
+		this.navFactory = new NavFactory(onPageChange, (pageSet: PageSet) => { this.updateNavDoms(pageSet); }, isOwner);
 		this.navDomCallbacks = {
 			onPrev: () => { this.onPrev(); },
 			onNext: () => { this.onNext(); }

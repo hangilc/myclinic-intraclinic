@@ -57,7 +57,7 @@ class Main {
         let navMenu = typed_dom_1.h.div({}, []);
         let navWork = typed_dom_1.h.div({}, []);
         this.postsWrapper = typed_dom_1.h.div({}, []);
-        this.nav = new nav_1.NavManager(posts => { this.onPageChange(posts); }, navMenu, navWork);
+        this.nav = new nav_1.NavManager(posts => { this.onPageChange(posts); }, navMenu, navWork, user.isOwner());
         this.dom = typed_dom_1.h.div({}, [
             typed_dom_1.h.h1({}, ["院内ミーティング"]),
             this.userDisp(),

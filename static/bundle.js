@@ -103,7 +103,7 @@
 	        let navMenu = typed_dom_1.h.div({}, []);
 	        let navWork = typed_dom_1.h.div({}, []);
 	        this.postsWrapper = typed_dom_1.h.div({}, []);
-	        this.nav = new nav_1.NavManager(posts => { this.onPageChange(posts); }, navMenu, navWork);
+	        this.nav = new nav_1.NavManager(posts => { this.onPageChange(posts); }, navMenu, navWork, user.isOwner());
 	        this.dom = typed_dom_1.h.div({}, [
 	            typed_dom_1.h.h1({}, ["院内ミーティング"]),
 	            this.userDisp(),
@@ -10600,6 +10600,7 @@
 	    });
 	};
 	const typed_dom_1 = __webpack_require__(1);
+	const tag_form_1 = __webpack_require__(124);
 	const service = __webpack_require__(4);
 	const kanjidate = __webpack_require__(8);
 	const moment = __webpack_require__(9);
@@ -10782,6 +10783,9 @@
 	        this.itemsPerPage = 10;
 	        this.current = null;
 	    }
+	    getCurrentTag() {
+	        return this.current;
+	    }
 	    recalc() {
 	        return __awaiter(this, void 0, void 0, function* () {
 	            let current = this.current;
@@ -10910,28 +10914,59 @@
 	    }
 	}
 	class TagSelector {
-	    constructor(tags, pageSet, onPageChange, updateNavDoms) {
-	        this.dom = typed_dom_1.h.div({}, [
-	            typed_dom_1.h.ul({}, tags.map(tag => {
+	    constructor(tags, pageSet, onPageChange, updateNavDoms, isOwner) {
+	        this.tags = tags;
+	        this.pageSet = pageSet;
+	        this.onPageChange = onPageChange;
+	        this.updateNavDoms = updateNavDoms;
+	        this.isOwner = isOwner;
+	        this.dom = typed_dom_1.h.div({}, []);
+	        this.updateDom();
+	    }
+	    updateDom() {
+	        this.dom.innerHTML = "";
+	        typed_dom_1.appendToElement(this.dom, [
+	            typed_dom_1.h.ul({}, this.tags.map(tag => {
+	                let pageSet = this.pageSet;
 	                let a = typed_dom_1.h.a({}, [tag.name]);
+	                let currentTag = pageSet.getCurrentTag();
+	                if (currentTag !== null) {
+	                    if (tag.id === currentTag.id) {
+	                        a.style.color = "red";
+	                    }
+	                }
 	                a.addEventListener("click", (event) => __awaiter(this, void 0, void 0, function* () {
-	                    pageSet.setCurrentTag(tag);
-	                    yield pageSet.recalc();
-	                    updateNavDoms(pageSet);
-	                    let posts = yield pageSet.fetchPage();
-	                    onPageChange(posts);
+	                    this.pageSet.setCurrentTag(tag);
+	                    return this.reloadPage();
 	                }));
 	                return typed_dom_1.h.li({}, [a]);
-	            }))
+	            })),
+	            this.isOwner ? new tag_form_1.TagForm({
+	                onNewTag: (newTagId) => __awaiter(this, void 0, void 0, function* () {
+	                    this.tags = yield service.listIntraclinicTag();
+	                    return this.reloadPage();
+	                })
+	            }).dom : null
 	        ]);
+	    }
+	    reloadPage() {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            let pageSet = this.pageSet;
+	            yield pageSet.recalc();
+	            this.updateNavDoms(pageSet);
+	            let posts = yield pageSet.fetchPage();
+	            this.onPageChange(posts);
+	            this.updateDom();
+	        });
 	    }
 	}
 	class ByTagNavWidget {
-	    constructor(onPageChange, updateNavDoms) {
+	    constructor(onPageChange, updateNavDoms, isOwner) {
 	        this.pageSet = new TagPageSet();
 	        this.workareaContent = null;
 	        this.onPageChange = onPageChange;
 	        this.updateNavDoms = updateNavDoms;
+	        this.isOwner = isOwner;
 	    }
 	    getPageSet() {
 	        return this.pageSet;
@@ -10941,7 +10976,7 @@
 	            let content = this.workareaContent;
 	            if (content === null) {
 	                let tags = yield service.listIntraclinicTag();
-	                content = new TagSelector(tags, this.pageSet, this.onPageChange, this.updateNavDoms);
+	                content = new TagSelector(tags, this.pageSet, this.onPageChange, this.updateNavDoms, this.isOwner);
 	                this.workareaContent = content;
 	            }
 	            typed_dom_1.appendToElement(workarea, [content.dom]);
@@ -10949,10 +10984,11 @@
 	    }
 	}
 	class NavFactory {
-	    constructor(onPageChange, updateNavDoms) {
+	    constructor(onPageChange, updateNavDoms, isOwner) {
 	        this.cache = {};
 	        this.onPageChange = onPageChange;
 	        this.updateNavDoms = updateNavDoms;
+	        this.isOwner = isOwner;
 	    }
 	    get(kind) {
 	        if (!(kind in this.cache)) {
@@ -10965,7 +11001,7 @@
 	            case "default": return new ChronoNavWidget();
 	            case "month": return new ByMonthNavWidget(this.onPageChange, this.updateNavDoms);
 	            case "search": return new SearchNavWidget(this.onPageChange, this.updateNavDoms);
-	            case "tag": return new ByTagNavWidget(this.onPageChange, this.updateNavDoms);
+	            case "tag": return new ByTagNavWidget(this.onPageChange, this.updateNavDoms, this.isOwner);
 	        }
 	    }
 	}
@@ -10995,13 +11031,13 @@
 	    }
 	}
 	class NavManager {
-	    constructor(onPageChange, menuArea, workarea) {
+	    constructor(onPageChange, menuArea, workarea, isOwner) {
 	        this.navDomList = [];
 	        this.currentNavKind = null;
 	        this.onPageChange = onPageChange;
 	        this.setupMenu(menuArea);
 	        this.workarea = workarea;
-	        this.navFactory = new NavFactory(onPageChange, (pageSet) => { this.updateNavDoms(pageSet); });
+	        this.navFactory = new NavFactory(onPageChange, (pageSet) => { this.updateNavDoms(pageSet); }, isOwner);
 	        this.navDomCallbacks = {
 	            onPrev: () => { this.onPrev(); },
 	            onNext: () => { this.onNext(); }
@@ -26937,6 +26973,66 @@
 	    }
 	}
 	exports.TagSelectForm = TagSelectForm;
+
+
+/***/ },
+/* 124 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+	    return new (P || (P = Promise))(function (resolve, reject) {
+	        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+	        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+	        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+	        step((generator = generator.apply(thisArg, _arguments || [])).next());
+	    });
+	};
+	const typed_dom_1 = __webpack_require__(1);
+	const service = __webpack_require__(4);
+	class TagForm {
+	    constructor(callbacks) {
+	        this.callbacks = callbacks;
+	        this.workarea = typed_dom_1.h.div({}, []);
+	        this.dom = typed_dom_1.h.div({}, [
+	            this.createMenu(),
+	            this.workarea
+	        ]);
+	    }
+	    createMenu() {
+	        let newTag = typed_dom_1.h.a({}, ["新規タグ"]);
+	        newTag.addEventListener("click", event => {
+	            this.workarea.innerHTML = "";
+	            typed_dom_1.appendToElement(this.workarea, [
+	                this.newTagForm()
+	            ]);
+	        });
+	        return typed_dom_1.h.div({}, [
+	            newTag, " ",
+	        ]);
+	    }
+	    newTagForm() {
+	        let input = typed_dom_1.h.input({ size: 8 }, []);
+	        let button = typed_dom_1.h.button({}, ["入力"]);
+	        button.addEventListener("click", (event) => __awaiter(this, void 0, void 0, function* () {
+	            let text = input.value.trim();
+	            if (text === "") {
+	                return;
+	            }
+	            let newTagId = yield service.createIntraclinicTag(text);
+	            if (this.callbacks.onNewTag) {
+	                this.callbacks.onNewTag(newTagId);
+	            }
+	        }));
+	        return typed_dom_1.h.form({}, [
+	            "タグ名：",
+	            input,
+	            " ",
+	            button
+	        ]);
+	    }
+	}
+	exports.TagForm = TagForm;
 
 
 /***/ }
