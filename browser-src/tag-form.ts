@@ -3,8 +3,9 @@ import { IntraclinicTag } from "./model/intraclinic-tag";
 import * as service from "./service";
 
 interface TagFormCallbacks {
-	onNewTag?: (tagId: number) => Promise<void>;
-	onDelTag?: (tagIds: number[]) => Promise<void>;
+	//onNewTag?: (tagId: number) => Promise<void>;
+	//onDelTag?: (tagIds: number[]) => Promise<void>;
+	reloadPage?: () => Promise<void>;
 }
 
 export class TagForm {
@@ -34,31 +35,41 @@ export class TagForm {
 			this.workarea.innerHTML = "";
 			let form = await this.delTagForm();
 			appendToElement(this.workarea, [form]);
+		});
+		let renameTag = h.a({}, ["タグ名変更"]);
+		renameTag.addEventListener("click", async event => {
+			this.workarea.innerHTML = "";
+			let form = await this.renameTagForm();
+			appendToElement(this.workarea, [form]);
 		})
 		return h.div({}, [
 			newTag, " | ",
-			delTag
+			delTag, " | ",
+			renameTag
 		])
 	}
 
 	private newTagForm(): HTMLElement {
 		let input = h.input({size: 12}, []);
-		let button = h.button({}, ["入力"]);
-		button.addEventListener("click", async event => {
+		let enterButton = h.button({}, ["入力"]);
+		enterButton.addEventListener("click", async event => {
 			let text = input.value.trim();
 			if( text === "" ){
 				return;
 			}
 			let newTagId = await service.createIntraclinicTag(text);
-			if( this.callbacks.onNewTag ){
-				this.callbacks.onNewTag(newTagId);
+			if( this.callbacks.reloadPage ){
+				this.callbacks.reloadPage();
 			}
 		});
+		let cancelButton = h.button({}, ["キャンセル"]);
+		cancelButton.addEventListener("click", event => {
+			this.workarea.innerHTML = "";
+		})
 		return h.form({}, [
-			"タグ名：",
-			input,
-			" ",
-			button
+			"タグ名：", input, " ",
+			enterButton, " ",
+			cancelButton
 		]);
 	}
 
@@ -75,7 +86,11 @@ export class TagForm {
 		}));
 		items = items.filter(item => item.count === 0 );
 		if( items.length === 0 ){
-			return h.div({}, ["削除できるタグがありません。"]);
+			let okButton = h.button({}, ["OK"]);
+			okButton.addEventListener("click", event => {
+				this.workarea.innerHTML = "";
+			})
+			return h.div({}, ["削除できるタグがありません。", " ", okButton]);
 		}
 		let inputs = items.map(item => {
 			return {
@@ -90,8 +105,8 @@ export class TagForm {
 				return service.deleteIntraclinicTag(tagId);
 			}))
 			.then(_ => {
-				if( this.callbacks.onDelTag ){
-					this.callbacks.onDelTag(selectedIds);
+				if( this.callbacks.reloadPage ){
+					this.callbacks.reloadPage();
 				}
 			})
 		})
@@ -111,5 +126,33 @@ export class TagForm {
 			cancelButton
 		]);
 		return form;
+	}
+
+	private async renameTagForm(): Promise<HTMLElement> {
+		let allTags = await service.listIntraclinicTag();
+		let doneButton = h.button({}, ["終了"]);
+		doneButton.addEventListener("click", event => {
+			this.workarea.innerHTML = "";
+		});
+		let inputs = allTags.map(tag => {
+			let button = h.button({}, ["名前変更"]);
+			button.addEventListener("click", async event => {
+				let newName = prompt("新しい名前", tag.name);
+				if( newName !== null ){
+					await service.renameIntraclinicTag(tag.id, newName);
+					if( this.callbacks.reloadPage ){
+						this.callbacks.reloadPage();
+					}
+				}
+			})
+			return h.div({}, [
+				tag.name, " ", button
+			]);
+		})
+		return h.div({}, [
+			...inputs,
+			" ",
+			doneButton
+		]);
 	}
 }

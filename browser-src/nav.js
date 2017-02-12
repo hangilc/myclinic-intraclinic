@@ -358,19 +358,13 @@ class TagSelector {
                 return typed_dom_1.h.li({}, [a]);
             })),
             this.isOwner ? new tag_form_1.TagForm({
-                onNewTag: (newTagId) => __awaiter(this, void 0, void 0, function* () {
-                    this.tags = yield service.listIntraclinicTag();
-                    return this.reloadPage();
-                }),
-                onDelTag: (newTagId) => __awaiter(this, void 0, void 0, function* () {
-                    this.tags = yield service.listIntraclinicTag();
-                    return this.reloadPage();
-                })
+                reloadPage: () => __awaiter(this, void 0, void 0, function* () { return this.reloadPage(); }),
             }).dom : null
         ]);
     }
     reloadPage() {
         return __awaiter(this, void 0, void 0, function* () {
+            this.tags = yield service.listIntraclinicTag();
             let pageSet = this.pageSet;
             yield pageSet.recalc();
             this.updateNavDoms(pageSet);

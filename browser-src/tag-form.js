@@ -32,29 +32,39 @@ class TagForm {
             let form = yield this.delTagForm();
             typed_dom_1.appendToElement(this.workarea, [form]);
         }));
+        let renameTag = typed_dom_1.h.a({}, ["タグ名変更"]);
+        renameTag.addEventListener("click", (event) => __awaiter(this, void 0, void 0, function* () {
+            this.workarea.innerHTML = "";
+            let form = yield this.renameTagForm();
+            typed_dom_1.appendToElement(this.workarea, [form]);
+        }));
         return typed_dom_1.h.div({}, [
             newTag, " | ",
-            delTag
+            delTag, " | ",
+            renameTag
         ]);
     }
     newTagForm() {
         let input = typed_dom_1.h.input({ size: 12 }, []);
-        let button = typed_dom_1.h.button({}, ["入力"]);
-        button.addEventListener("click", (event) => __awaiter(this, void 0, void 0, function* () {
+        let enterButton = typed_dom_1.h.button({}, ["入力"]);
+        enterButton.addEventListener("click", (event) => __awaiter(this, void 0, void 0, function* () {
             let text = input.value.trim();
             if (text === "") {
                 return;
             }
             let newTagId = yield service.createIntraclinicTag(text);
-            if (this.callbacks.onNewTag) {
-                this.callbacks.onNewTag(newTagId);
+            if (this.callbacks.reloadPage) {
+                this.callbacks.reloadPage();
             }
         }));
+        let cancelButton = typed_dom_1.h.button({}, ["キャンセル"]);
+        cancelButton.addEventListener("click", event => {
+            this.workarea.innerHTML = "";
+        });
         return typed_dom_1.h.form({}, [
-            "タグ名：",
-            input,
-            " ",
-            button
+            "タグ名：", input, " ",
+            enterButton, " ",
+            cancelButton
         ]);
     }
     delTagForm() {
@@ -71,7 +81,11 @@ class TagForm {
             }));
             items = items.filter(item => item.count === 0);
             if (items.length === 0) {
-                return typed_dom_1.h.div({}, ["削除できるタグがありません。"]);
+                let okButton = typed_dom_1.h.button({}, ["OK"]);
+                okButton.addEventListener("click", event => {
+                    this.workarea.innerHTML = "";
+                });
+                return typed_dom_1.h.div({}, ["削除できるタグがありません。", " ", okButton]);
             }
             let inputs = items.map(item => {
                 return {
@@ -86,8 +100,8 @@ class TagForm {
                     return service.deleteIntraclinicTag(tagId);
                 }))
                     .then(_ => {
-                    if (this.callbacks.onDelTag) {
-                        this.callbacks.onDelTag(selectedIds);
+                    if (this.callbacks.reloadPage) {
+                        this.callbacks.reloadPage();
                     }
                 });
             });
@@ -107,6 +121,35 @@ class TagForm {
                 cancelButton
             ]);
             return form;
+        });
+    }
+    renameTagForm() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let allTags = yield service.listIntraclinicTag();
+            let doneButton = typed_dom_1.h.button({}, ["終了"]);
+            doneButton.addEventListener("click", event => {
+                this.workarea.innerHTML = "";
+            });
+            let inputs = allTags.map(tag => {
+                let button = typed_dom_1.h.button({}, ["名前変更"]);
+                button.addEventListener("click", (event) => __awaiter(this, void 0, void 0, function* () {
+                    let newName = prompt("新しい名前", tag.name);
+                    if (newName !== null) {
+                        yield service.renameIntraclinicTag(tag.id, newName);
+                        if (this.callbacks.reloadPage) {
+                            this.callbacks.reloadPage();
+                        }
+                    }
+                }));
+                return typed_dom_1.h.div({}, [
+                    tag.name, " ", button
+                ]);
+            });
+            return typed_dom_1.h.div({}, [
+                ...inputs,
+                " ",
+                doneButton
+            ]);
         });
     }
 }

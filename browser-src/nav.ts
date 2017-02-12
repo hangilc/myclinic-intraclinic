@@ -389,19 +389,21 @@ class TagSelector {
 				return h.li({}, [a]);
 			})),
 			this.isOwner ? new TagForm({
-				onNewTag: async (newTagId) => {
-					this.tags = await service.listIntraclinicTag();
-					return this.reloadPage();
-				},
-				onDelTag: async (newTagId) => {
-					this.tags = await service.listIntraclinicTag();
-					return this.reloadPage();
-				}
+				reloadPage: async() => this.reloadPage(),
+				// onNewTag: async (newTagId) => {
+				// 	this.tags = await service.listIntraclinicTag();
+				// 	return this.reloadPage();
+				// },
+				// onDelTag: async (newTagId) => {
+				// 	this.tags = await service.listIntraclinicTag();
+				// 	return this.reloadPage();
+				// }
 			}).dom : null
 		]);
 	}
 
 	private async reloadPage(): Promise<void> {
+		this.tags = await service.listIntraclinicTag();
 		let pageSet = this.pageSet;
 		await pageSet.recalc();
 		this.updateNavDoms(pageSet);
