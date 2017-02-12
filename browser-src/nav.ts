@@ -192,6 +192,14 @@ class TagPageSet extends PageSetBase implements PageSet {
 
 	async recalc(): Promise<void> {
 		let current = this.current;
+		let allTags = await service.listIntraclinicTag();
+		if( current !== null ){
+			let currentId = current.id;
+			if( !allTags.some(tag => tag.id === currentId) ){
+				current = null;
+				this.current = null;
+			}
+		}
 		if( current === null ){
 			this.setTotalPages(0);
 			this.setCurrentPage(0);
@@ -382,6 +390,10 @@ class TagSelector {
 			})),
 			this.isOwner ? new TagForm({
 				onNewTag: async (newTagId) => {
+					this.tags = await service.listIntraclinicTag();
+					return this.reloadPage();
+				},
+				onDelTag: async (newTagId) => {
 					this.tags = await service.listIntraclinicTag();
 					return this.reloadPage();
 				}

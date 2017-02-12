@@ -197,6 +197,14 @@ class TagPageSet extends PageSetBase {
     recalc() {
         return __awaiter(this, void 0, void 0, function* () {
             let current = this.current;
+            let allTags = yield service.listIntraclinicTag();
+            if (current !== null) {
+                let currentId = current.id;
+                if (!allTags.some(tag => tag.id === currentId)) {
+                    current = null;
+                    this.current = null;
+                }
+            }
             if (current === null) {
                 this.setTotalPages(0);
                 this.setCurrentPage(0);
@@ -351,6 +359,10 @@ class TagSelector {
             })),
             this.isOwner ? new tag_form_1.TagForm({
                 onNewTag: (newTagId) => __awaiter(this, void 0, void 0, function* () {
+                    this.tags = yield service.listIntraclinicTag();
+                    return this.reloadPage();
+                }),
+                onDelTag: (newTagId) => __awaiter(this, void 0, void 0, function* () {
                     this.tags = yield service.listIntraclinicTag();
                     return this.reloadPage();
                 })
