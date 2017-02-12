@@ -20,6 +20,7 @@ function formatContent(content: string): (string|HTMLElement)[] {
 export class Post {
 	dom: HTMLElement;
 	tagWorkarea: HTMLElement;
+	tagWrapper: HTMLElement;
 	commentsWrapper: HTMLElement;
 	onEdit: () => void = () => {};
 	onDelete: () => void = () => {};
@@ -37,18 +38,24 @@ export class Post {
 		this.isOwner = isOwner;
 		this.userName = userName;
 		this.tagWorkarea = h.div({}, []);
+		this.tagWrapper = h.div({}, [this.tagPart(tags)]);
 		this.commentsWrapper = h.div({}, [this.commentPart()]);
 		this.dom = h.div({"class": "postWrapper"}, [
 			this.datePart(),
 			this.editPart(),
 			this.tagWorkarea,
 			this.contentPart(),
-			this.tagPart(tags),
+			this.tagWrapper,
 			this.commentsWrapper
 		]);
 	}
 
-	async updateCommentsArea(comments: IntraclinicComment[]): Promise<void> {
+	updateTagsArea(tags: IntraclinicTag[]): void {
+		this.tagWrapper.innerHTML = "";
+		appendToElement(this.tagWrapper, [this.tagPart(tags)]);
+	}
+
+	updateCommentsArea(comments: IntraclinicComment[]): void {
 		this.modelComments = comments;
 		this.commentsWrapper.innerHTML = "";
 		appendToElement(this.commentsWrapper, [this.commentPart()]);

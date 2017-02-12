@@ -10,7 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 const typed_dom_1 = require("./typed-dom");
 const service_1 = require("./service");
 class TagSelectForm {
-    constructor(allTags, currentTags, postId) {
+    constructor(allTags, currentTags, postId, doneCallback) {
         let checks = allTags.map(tag => {
             let checked = currentTags.some(t => t.id === tag.id);
             return {
@@ -38,9 +38,10 @@ class TagSelectForm {
             let ok = yield service_1.batchModifyIntraclinicTagsForPost(arg);
             if (!ok) {
                 alert("タグの編集に失敗しました");
+                doneCallback(false);
                 return;
             }
-            console.log("ok");
+            doneCallback(true);
         }));
         this.dom = typed_dom_1.h.div({
             style: "border:1px solid #ccc; padding: 6px"

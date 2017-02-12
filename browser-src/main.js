@@ -182,7 +182,14 @@ class Main {
             if (post.tagWorkarea.innerHTML === "") {
                 let allTags = yield service.listIntraclinicTag();
                 let currentTags = yield service.listIntraclinicTagForPost(postId);
-                let form = new tag_select_form_1.TagSelectForm(allTags, currentTags, postId);
+                let form = new tag_select_form_1.TagSelectForm(allTags, currentTags, postId, (ok) => __awaiter(this, void 0, void 0, function* () {
+                    if (!ok) {
+                        return;
+                    }
+                    let tags = yield service.listIntraclinicTagForPost(postId);
+                    post.tagWorkarea.innerHTML = "";
+                    post.updateTagsArea(tags);
+                }));
                 typed_dom_1.appendToElement(post.tagWorkarea, [form.dom]);
             }
             else {

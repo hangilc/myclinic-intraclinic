@@ -228,7 +228,14 @@
 	            if (post.tagWorkarea.innerHTML === "") {
 	                let allTags = yield service.listIntraclinicTag();
 	                let currentTags = yield service.listIntraclinicTagForPost(postId);
-	                let form = new tag_select_form_1.TagSelectForm(allTags, currentTags, postId);
+	                let form = new tag_select_form_1.TagSelectForm(allTags, currentTags, postId, (ok) => __awaiter(this, void 0, void 0, function* () {
+	                    if (!ok) {
+	                        return;
+	                    }
+	                    let tags = yield service.listIntraclinicTagForPost(postId);
+	                    post.tagWorkarea.innerHTML = "";
+	                    post.updateTagsArea(tags);
+	                }));
 	                typed_dom_1.appendToElement(post.tagWorkarea, [form.dom]);
 	            }
 	            else {
@@ -26640,14 +26647,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
-	var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-	    return new (P || (P = Promise))(function (resolve, reject) {
-	        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-	        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-	        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-	        step((generator = generator.apply(thisArg, _arguments || [])).next());
-	    });
-	};
 	const typed_dom_1 = __webpack_require__(1);
 	const intraclinic_comment_1 = __webpack_require__(7);
 	const kanjidate = __webpack_require__(8);
@@ -26674,22 +26673,25 @@
 	        this.isOwner = isOwner;
 	        this.userName = userName;
 	        this.tagWorkarea = typed_dom_1.h.div({}, []);
+	        this.tagWrapper = typed_dom_1.h.div({}, [this.tagPart(tags)]);
 	        this.commentsWrapper = typed_dom_1.h.div({}, [this.commentPart()]);
 	        this.dom = typed_dom_1.h.div({ "class": "postWrapper" }, [
 	            this.datePart(),
 	            this.editPart(),
 	            this.tagWorkarea,
 	            this.contentPart(),
-	            this.tagPart(tags),
+	            this.tagWrapper,
 	            this.commentsWrapper
 	        ]);
 	    }
+	    updateTagsArea(tags) {
+	        this.tagWrapper.innerHTML = "";
+	        typed_dom_1.appendToElement(this.tagWrapper, [this.tagPart(tags)]);
+	    }
 	    updateCommentsArea(comments) {
-	        return __awaiter(this, void 0, void 0, function* () {
-	            this.modelComments = comments;
-	            this.commentsWrapper.innerHTML = "";
-	            typed_dom_1.appendToElement(this.commentsWrapper, [this.commentPart()]);
-	        });
+	        this.modelComments = comments;
+	        this.commentsWrapper.innerHTML = "";
+	        typed_dom_1.appendToElement(this.commentsWrapper, [this.commentPart()]);
 	    }
 	    datePart() {
 	        return typed_dom_1.h.div({ "class": "dateLabel" }, [
@@ -26881,7 +26883,7 @@
 	const typed_dom_1 = __webpack_require__(1);
 	const service_1 = __webpack_require__(4);
 	class TagSelectForm {
-	    constructor(allTags, currentTags, postId) {
+	    constructor(allTags, currentTags, postId, doneCallback) {
 	        let checks = allTags.map(tag => {
 	            let checked = currentTags.some(t => t.id === tag.id);
 	            return {
@@ -26909,9 +26911,10 @@
 	            let ok = yield service_1.batchModifyIntraclinicTagsForPost(arg);
 	            if (!ok) {
 	                alert("タグの編集に失敗しました");
+	                doneCallback(false);
 	                return;
 	            }
-	            console.log("ok");
+	            doneCallback(true);
 	        }));
 	        this.dom = typed_dom_1.h.div({
 	            style: "border:1px solid #ccc; padding: 6px"

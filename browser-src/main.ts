@@ -199,7 +199,14 @@ class Main {
 			if( post.tagWorkarea.innerHTML === "" ){
 				let allTags = await service.listIntraclinicTag();
 				let currentTags = await service.listIntraclinicTagForPost(postId);
-				let form = new TagSelectForm(allTags, currentTags, postId);
+				let form = new TagSelectForm(allTags, currentTags, postId, async ok => {
+					if( !ok ){
+						return;
+					}
+					let tags = await service.listIntraclinicTagForPost(postId);
+					post.tagWorkarea.innerHTML = "";
+					post.updateTagsArea(tags);
+				});
 				appendToElement(post.tagWorkarea, [form.dom]);
 			} else {
 				post.tagWorkarea.innerHTML = "";

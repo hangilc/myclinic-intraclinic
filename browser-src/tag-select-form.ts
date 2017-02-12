@@ -6,7 +6,8 @@ import { batchModifyIntraclinicTagsForPost, BatchModifyIntraclinicTagsForPostArg
 export class TagSelectForm {
 	dom: HTMLElement;
 
-	constructor(allTags: IntraclinicTag[], currentTags: IntraclinicTag[], postId: number){
+	constructor(allTags: IntraclinicTag[], currentTags: IntraclinicTag[], postId: number,
+		doneCallback: (boolean) => void){
 		let checks = allTags.map(tag => {
 			let checked: boolean = currentTags.some(t => t.id === tag.id);
 			return {
@@ -34,9 +35,10 @@ export class TagSelectForm {
 			let ok = await batchModifyIntraclinicTagsForPost(arg);
 			if( !ok ){
 				alert("タグの編集に失敗しました");
+				doneCallback(false);
 				return;
 			}
-			console.log("ok");
+			doneCallback(true);
 		});
 		this.dom = h.div({
 			style: "border:1px solid #ccc; padding: 6px"
