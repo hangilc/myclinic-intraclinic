@@ -13,6 +13,9 @@ function createElement(tag, attrs, children) {
                 }
             }
         }
+        else if (key === "checked") {
+            e[key] = val;
+        }
         else {
             e.setAttribute(key, val);
         }

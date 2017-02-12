@@ -7,6 +7,7 @@ import { IntraclinicTag } from "./model/intraclinic-tag";
 import * as service from "./service";
 import { Post } from "./post";
 import { PostForm } from "./post-form";
+import { TagSelectForm } from "./tag-select-form";
 import * as moment from "moment";
 
 class User {
@@ -195,7 +196,14 @@ class Main {
 
 	private makeOnEditTagCallback(post: Post, postId: number){
 		return async () => {
-
+			if( post.tagWorkarea.innerHTML === "" ){
+				let allTags = await service.listIntraclinicTag();
+				let currentTags = await service.listIntraclinicTagForPost(postId);
+				let form = new TagSelectForm(allTags, currentTags, postId);
+				appendToElement(post.tagWorkarea, [form.dom]);
+			} else {
+				post.tagWorkarea.innerHTML = "";
+			}
 		}
 	}
 

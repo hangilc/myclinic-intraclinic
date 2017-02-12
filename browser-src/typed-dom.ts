@@ -11,6 +11,8 @@ export function createElement<T extends HTMLElement>(tag: string, attrs: any,
 					e.style[cssKey] = val[cssKey];
 				}
 			}
+		} else if( key === "checked" ){
+			e[key] = val;
 		} else {
 			e.setAttribute(key, val);
 		}

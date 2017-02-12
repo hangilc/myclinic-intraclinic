@@ -7,12 +7,16 @@ function arrayConverter(c) {
 }
 exports.arrayConverter = arrayConverter;
 function request(url, data, method, cvtor) {
+    if (method === "POST" && typeof data !== "string") {
+        data = JSON.stringify(data);
+    }
     return new Promise(function (resolve, reject) {
         $.ajax({
             url: url,
             type: method,
             data: data,
             dataType: "json",
+            contentType: "application/json",
             timeout: 15000,
             success: function (result) {
                 try {

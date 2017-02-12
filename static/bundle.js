@@ -60,6 +60,7 @@
 	const service = __webpack_require__(4);
 	const post_1 = __webpack_require__(120);
 	const post_form_1 = __webpack_require__(121);
+	const tag_select_form_1 = __webpack_require__(123);
 	const moment = __webpack_require__(9);
 	class User {
 	    constructor(name, role, label) {
@@ -224,6 +225,15 @@
 	    }
 	    makeOnEditTagCallback(post, postId) {
 	        return () => __awaiter(this, void 0, void 0, function* () {
+	            if (post.tagWorkarea.innerHTML === "") {
+	                let allTags = yield service.listIntraclinicTag();
+	                let currentTags = yield service.listIntraclinicTagForPost(postId);
+	                let form = new tag_select_form_1.TagSelectForm(allTags, currentTags, postId);
+	                typed_dom_1.appendToElement(post.tagWorkarea, [form.dom]);
+	            }
+	            else {
+	                post.tagWorkarea.innerHTML = "";
+	            }
 	        });
 	    }
 	    makeOnEnterCommentCallback(post) {
@@ -254,6 +264,9 @@
 	                    e.style[cssKey] = val[cssKey];
 	                }
 	            }
+	        }
+	        else if (key === "checked") {
+	            e[key] = val;
 	        }
 	        else {
 	            e.setAttribute(key, val);
@@ -11225,18 +11238,18 @@
 	    });
 	}
 	exports.deleteIntraclinicTag = deleteIntraclinicTag;
-	function addIntraclinicPostToTag(tagId, postId) {
+	function addIntraclinicTagToPost(tagId, postId) {
 	    return __awaiter(this, void 0, void 0, function* () {
-	        return request_1.request("/service?_q=add_intra_clinic_post_to_tag", { tag_id: tagId, post_id: postId }, "POST", toBoolean);
+	        return request_1.request("/service?_q=add_intra_clinic_tag_to_post", { tag_id: tagId, post_id: postId }, "POST", toBoolean);
 	    });
 	}
-	exports.addIntraclinicPostToTag = addIntraclinicPostToTag;
-	function removeIntraclinicPostFromTag(tagId, postId) {
+	exports.addIntraclinicTagToPost = addIntraclinicTagToPost;
+	function removeIntraclinicTagFromPost(tagId, postId) {
 	    return __awaiter(this, void 0, void 0, function* () {
-	        return request_1.request("/service?_q=remove_intra_clinic_post_from_tag", { tag_id: tagId, post_id: postId }, "POST", toBoolean);
+	        return request_1.request("/service?_q=remove_intra_clinic_tag_from_post", { tag_id: tagId, post_id: postId }, "POST", toBoolean);
 	    });
 	}
-	exports.removeIntraclinicPostFromTag = removeIntraclinicPostFromTag;
+	exports.removeIntraclinicTagFromPost = removeIntraclinicTagFromPost;
 	function countIntraclinicTagPost(tagId) {
 	    return __awaiter(this, void 0, void 0, function* () {
 	        return request_1.request("/service?_q=count_intra_clinic_tag_post", { tag_id: tagId }, "GET", toNumber);
@@ -11249,6 +11262,12 @@
 	    });
 	}
 	exports.listIntraclinicTagPost = listIntraclinicTagPost;
+	function batchModifyIntraclinicTagsForPost(arg) {
+	    return __awaiter(this, void 0, void 0, function* () {
+	        return request_1.request("/service?_q=batch_modify_intra_clinic_tags_for_post", arg, "POST", toBoolean);
+	    });
+	}
+	exports.batchModifyIntraclinicTagsForPost = batchModifyIntraclinicTagsForPost;
 
 
 /***/ },
@@ -11264,12 +11283,16 @@
 	}
 	exports.arrayConverter = arrayConverter;
 	function request(url, data, method, cvtor) {
+	    if (method === "POST" && typeof data !== "string") {
+	        data = JSON.stringify(data);
+	    }
 	    return new Promise(function (resolve, reject) {
 	        $.ajax({
 	            url: url,
 	            type: method,
 	            data: data,
 	            dataType: "json",
+	            contentType: "application/json",
 	            timeout: 15000,
 	            success: function (result) {
 	                try {
@@ -26650,10 +26673,12 @@
 	        this.modelComments = modelComments;
 	        this.isOwner = isOwner;
 	        this.userName = userName;
+	        this.tagWorkarea = typed_dom_1.h.div({}, []);
 	        this.commentsWrapper = typed_dom_1.h.div({}, [this.commentPart()]);
 	        this.dom = typed_dom_1.h.div({ "class": "postWrapper" }, [
 	            this.datePart(),
 	            this.editPart(),
+	            this.tagWorkarea,
 	            this.contentPart(),
 	            this.tagPart(tags),
 	            this.commentsWrapper
@@ -26838,6 +26863,65 @@
 	    return tag;
 	}
 	exports.jsonToIntraclinicTag = jsonToIntraclinicTag;
+
+
+/***/ },
+/* 123 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+	    return new (P || (P = Promise))(function (resolve, reject) {
+	        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+	        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+	        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+	        step((generator = generator.apply(thisArg, _arguments || [])).next());
+	    });
+	};
+	const typed_dom_1 = __webpack_require__(1);
+	const service_1 = __webpack_require__(4);
+	class TagSelectForm {
+	    constructor(allTags, currentTags, postId) {
+	        let checks = allTags.map(tag => {
+	            let checked = currentTags.some(t => t.id === tag.id);
+	            return {
+	                input: typed_dom_1.h.input({ type: "checkbox", checked: checked }, []),
+	                label: tag.name,
+	                tag: tag
+	            };
+	        });
+	        let enterButton = typed_dom_1.h.button({}, ["入力"]);
+	        enterButton.addEventListener("click", (event) => __awaiter(this, void 0, void 0, function* () {
+	            let selected = checks.filter(chk => chk.input.checked).map(chk => chk.tag);
+	            let toBeAdded = selected.filter(sel => currentTags.every(t => t.id !== sel.id));
+	            let toBeDeleted = currentTags.filter(t => selected.every(sel => sel.id !== t.id));
+	            let commands = [];
+	            toBeAdded.forEach(tag => {
+	                commands.push({ action: "add", tag_id: tag.id });
+	            });
+	            toBeDeleted.forEach(tag => {
+	                commands.push({ action: "remove", tag_id: tag.id });
+	            });
+	            let arg = {
+	                post_id: postId,
+	                commands: commands
+	            };
+	            let ok = yield service_1.batchModifyIntraclinicTagsForPost(arg);
+	            if (!ok) {
+	                alert("タグの編集に失敗しました");
+	                return;
+	            }
+	            console.log("ok");
+	        }));
+	        this.dom = typed_dom_1.h.div({
+	            style: "border:1px solid #ccc; padding: 6px"
+	        }, [
+	            ...checks.map(chk => typed_dom_1.h.div({}, [chk.input, " ", chk.label])),
+	            typed_dom_1.h.div({}, [enterButton])
+	        ]);
+	    }
+	}
+	exports.TagSelectForm = TagSelectForm;
 
 
 /***/ }

@@ -12,12 +12,16 @@ export function arrayConverter<T>(c: Converter<T>): Converter<T[]> {
 
 export function request<T>(url: string, data: Object, 
 	method: string, cvtor: Converter<T>){
+	if( method === "POST" && typeof data !== "string" ){
+		data = JSON.stringify(data);
+	}
 	return new Promise<T>(function(resolve, reject){
 		$.ajax({
 			url: url,
 			type: method,
 			data: data,
 			dataType: "json",
+			contentType: "application/json",
 			timeout: 15000,
 			success: function(result){
 				try {

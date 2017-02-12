@@ -19,6 +19,7 @@ function formatContent(content: string): (string|HTMLElement)[] {
 
 export class Post {
 	dom: HTMLElement;
+	tagWorkarea: HTMLElement;
 	commentsWrapper: HTMLElement;
 	onEdit: () => void = () => {};
 	onDelete: () => void = () => {};
@@ -35,10 +36,12 @@ export class Post {
 		this.modelComments = modelComments;
 		this.isOwner = isOwner;
 		this.userName = userName;
+		this.tagWorkarea = h.div({}, []);
 		this.commentsWrapper = h.div({}, [this.commentPart()]);
 		this.dom = h.div({"class": "postWrapper"}, [
 			this.datePart(),
 			this.editPart(),
+			this.tagWorkarea,
 			this.contentPart(),
 			this.tagPart(tags),
 			this.commentsWrapper

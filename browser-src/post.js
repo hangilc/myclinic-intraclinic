@@ -32,10 +32,12 @@ class Post {
         this.modelComments = modelComments;
         this.isOwner = isOwner;
         this.userName = userName;
+        this.tagWorkarea = typed_dom_1.h.div({}, []);
         this.commentsWrapper = typed_dom_1.h.div({}, [this.commentPart()]);
         this.dom = typed_dom_1.h.div({ "class": "postWrapper" }, [
             this.datePart(),
             this.editPart(),
+            this.tagWorkarea,
             this.contentPart(),
             this.tagPart(tags),
             this.commentsWrapper

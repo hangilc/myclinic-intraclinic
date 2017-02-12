@@ -107,12 +107,12 @@ export async function deleteIntraclinicTag(id: number): Promise<boolean> {
 	return request("/service?_q=delete_intra_clinic_tag", { id: id }, "POST", toBoolean);
 }
 
-export async function addIntraclinicPostToTag(tagId: number, postId: number): Promise<boolean> {
-	return request("/service?_q=add_intra_clinic_post_to_tag", { tag_id: tagId, post_id: postId }, "POST", toBoolean);
+export async function addIntraclinicTagToPost(tagId: number, postId: number): Promise<boolean> {
+	return request("/service?_q=add_intra_clinic_tag_to_post", { tag_id: tagId, post_id: postId }, "POST", toBoolean);
 }
 
-export async function removeIntraclinicPostFromTag(tagId: number, postId: number): Promise<boolean> {
-	return request("/service?_q=remove_intra_clinic_post_from_tag", { tag_id: tagId, post_id: postId }, "POST", toBoolean);
+export async function removeIntraclinicTagFromPost(tagId: number, postId: number): Promise<boolean> {
+	return request("/service?_q=remove_intra_clinic_tag_from_post", { tag_id: tagId, post_id: postId }, "POST", toBoolean);
 }
 
 export async function countIntraclinicTagPost(tagId: number): Promise<number> {
@@ -122,4 +122,18 @@ export async function countIntraclinicTagPost(tagId: number): Promise<number> {
 export async function listIntraclinicTagPost(tagId: number, offset: number, n: number): Promise<IntraclinicPost[]> {
 	return request("/service?_q=list_intra_clinic_tag_post", 
 		{ tag_id: tagId, offset: offset, n: n }, "GET", PostArrayConverter);
+}
+
+export interface BatchModifyIntraclinicTagsForPostCommand {
+	action: "add" | "remove",
+	tag_id: number
+}
+
+export interface BatchModifyIntraclinicTagsForPostArg {
+	post_id: number,
+	commands: BatchModifyIntraclinicTagsForPostCommand[]
+}
+
+export async function batchModifyIntraclinicTagsForPost(arg: BatchModifyIntraclinicTagsForPostArg): Promise<boolean> {
+	return request("/service?_q=batch_modify_intra_clinic_tags_for_post", arg, "POST", toBoolean);
 }

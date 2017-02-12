@@ -14,6 +14,7 @@ const intraclinic_post_1 = require("./model/intraclinic-post");
 const service = require("./service");
 const post_1 = require("./post");
 const post_form_1 = require("./post-form");
+const tag_select_form_1 = require("./tag-select-form");
 const moment = require("moment");
 class User {
     constructor(name, role, label) {
@@ -178,6 +179,15 @@ class Main {
     }
     makeOnEditTagCallback(post, postId) {
         return () => __awaiter(this, void 0, void 0, function* () {
+            if (post.tagWorkarea.innerHTML === "") {
+                let allTags = yield service.listIntraclinicTag();
+                let currentTags = yield service.listIntraclinicTagForPost(postId);
+                let form = new tag_select_form_1.TagSelectForm(allTags, currentTags, postId);
+                typed_dom_1.appendToElement(post.tagWorkarea, [form.dom]);
+            }
+            else {
+                post.tagWorkarea.innerHTML = "";
+            }
         });
     }
     makeOnEnterCommentCallback(post) {
