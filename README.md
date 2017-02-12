@@ -1,6 +1,6 @@
-# myclinic-refer
+# myclinic-intraclinic
 
-Intranet service for myclinic
+Intranet announce service for myclinic
 
 ## License
 This software is released under the MIT License, see [LICENSE.txt](LICENSE.txt).
